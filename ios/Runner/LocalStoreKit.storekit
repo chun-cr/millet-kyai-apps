@@ -1,0 +1,47 @@
+{
+  "identifier" : "A2E0F0C2-1E94-4D3A-8A4D-7B8D1245A101",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "29.90",
+      "familyShareable" : false,
+      "internalID" : "6F44CC21-31EB-4BE8-B86E-43C3028DDA01",
+      "localizations" : [
+        {
+          "description" : "Unlock the full AI health report with detailed constitution analysis, care plans, and personalized recommendations.",
+          "displayName" : "Unlock Full Report",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "解锁完整 AI 健康报告，查看体质详解、调理方案与个性化建议。",
+          "displayName" : "解锁完整报告",
+          "locale" : "zh_CN"
+        }
+      ],
+      "productID" : "report_unlock_full",
+      "referenceName" : "Report Unlock",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "00000000-0000-0000-0000-000000000001",
+    "_developerTeamID" : "LOCALTEAM",
+    "_lastSynchronizedDate" : 764380800,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "storeKitErrors" : [
+
+    ],
+    "subscriptionRenewalRate" : "MonthlyRenewalEveryThirtySeconds",
+    "timeRate" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
