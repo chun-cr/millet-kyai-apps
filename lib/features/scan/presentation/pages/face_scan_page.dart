@@ -51,7 +51,6 @@ class _FaceScanPageState extends State<FaceScanPage>
   bool _isScanning = false;
   bool _isSubmitting = false;
   bool _pauseAutoScanUntilReset = false;
-  double _scanProgress = 0;
   bool _isTransitioning = false;
   bool _stopMonitoringOnDispose = true;
 
@@ -134,6 +133,7 @@ class _FaceScanPageState extends State<FaceScanPage>
       guideRect: _faceGuideRectOnViewport,
       area: normalizedRectArea(normalizedBounds),
       allowHoldDrift: allowHoldDrift,
+      platform: defaultTargetPlatform,
     );
   }
 
@@ -174,6 +174,11 @@ class _FaceScanPageState extends State<FaceScanPage>
 
   bool get _bottomStatusHighlighted =>
       !_isScanning && !_isSubmitting && _isFaceReadyToHold;
+
+  bool get _showFaceBubbleStatus =>
+      !_isScanning &&
+      !_isSubmitting &&
+      (_faceDirection.isNotEmpty || !_hasFaceDetected || !_isFaceReadyToHold);
 
   Duration get _requiredFaceScanHoldDuration =>
       faceScanHoldDurationForPlatform(defaultTargetPlatform);
@@ -218,83 +223,90 @@ class _FaceScanPageState extends State<FaceScanPage>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-      _faceStatusSub?.cancel();
-      _faceStatusSub = _statusBridge.landmarkStream().listen((payload) {
-        if (!mounted) return;
-        final hasFace = _extractHasFace(payload);
-        final landmarks = _extractNormalizedLandmarks(payload['landmarks']);
-        final imageSize = _extractImageSize(payload);
-        final generationId = _extractInt(payload['generationId']);
-        final timestampMs = _extractInt(payload['timestampMs']);
-        final eventBackCamera = _extractBool(payload['isBackCamera']);
-        final mirrored = _extractBool(payload['mirrored']);
-        final now = DateTime.now();
-        final retainPreviousTracking = shouldRetainPreviousFaceTracking(
-          holdInProgress: _isScanning,
-          hasFaceDetected: hasFace,
-          hasLandmarks: landmarks.isNotEmpty,
-          timeSinceLastTrackedFace: _lastTrackedFaceAt == null
-              ? transientFaceTrackingGraceDuration +
-                    const Duration(milliseconds: 1)
-              : now.difference(_lastTrackedFaceAt!),
-        );
-        if (hasFace && landmarks.isNotEmpty) {
-          _lastTrackedFaceAt = now;
-        }
-        if (retainPreviousTracking) {
-          return;
-        }
-        if (_pauseAutoScanUntilReset && !hasFace) {
-          _pauseAutoScanUntilReset = false;
-        }
-        setState(() {
-          _hasFaceDetected = hasFace;
-          _normalizedLandmarks = landmarks;
-          _sourceImageSize = imageSize;
-          if (eventBackCamera != null) {
-            _isBackCamera = eventBackCamera;
-          }
-          _latestFaceGenerationId = generationId;
-          _latestFaceTimestampMs = timestampMs;
-          _latestFaceMirrored = mirrored;
-          _faceDirection = hasFace ? _computeFaceDirection(landmarks) : '';
-        });
-        if (_pauseAutoScanUntilReset && !_isFaceReadyToHold) {
-          _pauseAutoScanUntilReset = false;
-        }
-        _logFaceHoldDiagnosticsIfNeeded();
-        if (_isScanning && !_isSubmitting) {
-          final keepHoldAlive = shouldKeepFaceHoldAlive(
-            hasPermission: _hasPermission,
-            hasFaceDetected: _hasFaceDetected,
-            isFramed: _isFaceFramedForUpload(allowHoldDrift: false),
-            isRelaxedFramed: _isFaceFramedForUpload(allowHoldDrift: true),
-            holdInProgress: _scanHoldTimer != null,
-          );
-          if (_scanHoldTimer != null && !keepHoldAlive) {
-            _cancelScanHold(resetProgress: true);
-          }
-          return;
-        }
-        if (_isSubmitting) {
-          return;
-        }
-        if (!_pauseAutoScanUntilReset && _shouldAutoStartScan) {
-          _startScan();
-          return;
-        }
-        if (!_pauseAutoScanUntilReset &&
-            !_isTransitioning &&
-            _hasPermission &&
-            _hasFaceDetected &&
-            _normalizedLandmarks.isNotEmpty &&
-            _sourceImageSize != Size.zero) {
-          _queueDeferredAutoStartScanCheck();
-        }
-      });
       await _statusBridge.initialize();
+      await _subscribeToFaceStatus();
       await _statusBridge.startMonitoring();
     });
+  }
+
+  Future<void> _subscribeToFaceStatus() async {
+    await _faceStatusSub?.cancel();
+    _faceStatusSub = _statusBridge.landmarkStream().listen(
+      _handleFaceStatusPayload,
+    );
+  }
+
+  void _handleFaceStatusPayload(Map<String, dynamic> payload) {
+    if (!mounted) return;
+    final hasFace = _extractHasFace(payload);
+    final landmarks = _extractNormalizedLandmarks(payload['landmarks']);
+    final imageSize = _extractImageSize(payload);
+    final generationId = _extractInt(payload['generationId']);
+    final timestampMs = _extractInt(payload['timestampMs']);
+    final eventBackCamera = _extractBool(payload['isBackCamera']);
+    final mirrored = _extractBool(payload['mirrored']);
+    final now = DateTime.now();
+    final retainPreviousTracking = shouldRetainPreviousFaceTracking(
+      holdInProgress: _isScanning,
+      hasFaceDetected: hasFace,
+      hasLandmarks: landmarks.isNotEmpty,
+      timeSinceLastTrackedFace: _lastTrackedFaceAt == null
+          ? transientFaceTrackingGraceDuration + const Duration(milliseconds: 1)
+          : now.difference(_lastTrackedFaceAt!),
+    );
+    if (hasFace && landmarks.isNotEmpty) {
+      _lastTrackedFaceAt = now;
+    }
+    if (retainPreviousTracking) {
+      return;
+    }
+    if (_pauseAutoScanUntilReset && !hasFace) {
+      _pauseAutoScanUntilReset = false;
+    }
+    setState(() {
+      _hasFaceDetected = hasFace;
+      _normalizedLandmarks = landmarks;
+      _sourceImageSize = imageSize;
+      if (eventBackCamera != null) {
+        _isBackCamera = eventBackCamera;
+      }
+      _latestFaceGenerationId = generationId;
+      _latestFaceTimestampMs = timestampMs;
+      _latestFaceMirrored = mirrored;
+      _faceDirection = hasFace ? _computeFaceDirection(landmarks) : '';
+    });
+    if (_pauseAutoScanUntilReset && !_isFaceReadyToHold) {
+      _pauseAutoScanUntilReset = false;
+    }
+    _logFaceHoldDiagnosticsIfNeeded();
+    if (_isScanning && !_isSubmitting) {
+      final keepHoldAlive = shouldKeepFaceHoldAlive(
+        hasPermission: _hasPermission,
+        hasFaceDetected: _hasFaceDetected,
+        isFramed: _isFaceFramedForUpload(allowHoldDrift: false),
+        isRelaxedFramed: _isFaceFramedForUpload(allowHoldDrift: true),
+        holdInProgress: _scanHoldTimer != null,
+      );
+      if (_scanHoldTimer != null && !keepHoldAlive) {
+        _cancelScanHold();
+      }
+      return;
+    }
+    if (_isSubmitting) {
+      return;
+    }
+    if (!_pauseAutoScanUntilReset && _shouldAutoStartScan) {
+      _startScan();
+      return;
+    }
+    if (!_pauseAutoScanUntilReset &&
+        !_isTransitioning &&
+        _hasPermission &&
+        _hasFaceDetected &&
+        _normalizedLandmarks.isNotEmpty &&
+        _sourceImageSize != Size.zero) {
+      _queueDeferredAutoStartScanCheck();
+    }
   }
 
   void _startScan() {
@@ -314,12 +326,11 @@ class _FaceScanPageState extends State<FaceScanPage>
     final acceptedSnapshot = _freezeAcceptedFaceSnapshot();
     if (acceptedSnapshot == null) {
       _pauseAutoScanUntilReset = true;
-      _cancelScanHold(resetProgress: true);
+      _cancelScanHold();
       return;
     }
     setState(() {
       _isScanning = true;
-      _scanProgress = _requiredFaceScanHoldDuration > Duration.zero ? 0 : 0.08;
     });
     if (_requiredFaceScanHoldDuration <= Duration.zero) {
       unawaited(_captureAndUploadFace());
@@ -342,7 +353,7 @@ class _FaceScanPageState extends State<FaceScanPage>
         holdInProgress: true,
       );
       if (!keepHoldAlive) {
-        _cancelScanHold(resetProgress: true);
+        _cancelScanHold();
         return;
       }
 
@@ -352,24 +363,41 @@ class _FaceScanPageState extends State<FaceScanPage>
       if (progress >= 1) {
         timer.cancel();
         _scanHoldTimer = null;
-        setState(() => _scanProgress = 0.08);
         unawaited(_captureAndUploadFace());
         return;
       }
-      setState(() => _scanProgress = mapHoldProgressToVisualProgress(progress));
     });
   }
 
-  void _cancelScanHold({required bool resetProgress}) {
+  void _cancelScanHold() {
     _scanHoldTimer?.cancel();
     _scanHoldTimer = null;
     if (!mounted) return;
     setState(() {
       _isScanning = false;
-      if (resetProgress) {
-        _scanProgress = 0;
-      }
     });
+  }
+
+  Future<void> _stopMonitoringBeforeFaceUpload() async {
+    await _faceStatusSub?.cancel();
+    _faceStatusSub = null;
+    try {
+      await _statusBridge.stopMonitoring();
+    } on Object catch (error) {
+      AppLogger.network('Face monitoring stop before upload failed: $error');
+    }
+  }
+
+  Future<void> _resumeMonitoringAfterFaceUploadFailure() async {
+    if (!mounted || _isSubmitting || _isTransitioning) {
+      return;
+    }
+    try {
+      await _subscribeToFaceStatus();
+      await _statusBridge.startMonitoring();
+    } on Object catch (error) {
+      AppLogger.network('Face monitoring resume after upload failed: $error');
+    }
   }
 
   Future<void> _captureAndUploadFace() async {
@@ -381,13 +409,12 @@ class _FaceScanPageState extends State<FaceScanPage>
     final acceptedSnapshot = _freezeAcceptedFaceSnapshot();
     if (acceptedSnapshot == null) {
       _pauseAutoScanUntilReset = true;
-      _cancelScanHold(resetProgress: true);
+      _cancelScanHold();
       return;
     }
 
     setState(() {
       _isSubmitting = true;
-      _scanProgress = 0.65;
     });
 
     try {
@@ -412,7 +439,7 @@ class _FaceScanPageState extends State<FaceScanPage>
         return;
       }
 
-      setState(() => _scanProgress = 0.68);
+      await _stopMonitoringBeforeFaceUpload();
       final faceFrameUploadPath = await _buildFaceFrameUploadPath(
         capture,
         acceptedSnapshot,
@@ -432,11 +459,15 @@ class _FaceScanPageState extends State<FaceScanPage>
           'framePath=$faceFrameUploadPath',
         );
         _pauseAutoScanUntilReset = true;
-        _cancelScanHold(resetProgress: true);
+        _cancelScanHold();
         _clearAcceptedFaceSnapshot();
         setState(() {
           _isSubmitting = false;
         });
+        await _resumeMonitoringAfterFaceUploadFailure();
+        if (!mounted) {
+          return;
+        }
         showAppToast(
           context,
           context.l10n.scanFaceFrameRetryMessage,
@@ -465,15 +496,6 @@ class _FaceScanPageState extends State<FaceScanPage>
         topOrgId: uploadTenantContext.topOrgId,
         storeId: uploadTenantContext.storeId,
         clinicId: uploadTenantContext.clinicId,
-        onSendProgress: (sent, total) {
-          if (!mounted) {
-            return;
-          }
-          final progress = total > 0 ? sent / total : (sent > 0 ? 0.5 : 0.0);
-          setState(
-            () => _scanProgress = mapUploadProgressToVisualProgress(progress),
-          );
-        },
       );
 
       if (!mounted) {
@@ -485,18 +507,21 @@ class _FaceScanPageState extends State<FaceScanPage>
             ? '检测到多张人脸，请重新扫描。'
             : '未检测到清晰人脸，请重新扫描。';
         _pauseAutoScanUntilReset = true;
-        _cancelScanHold(resetProgress: true);
+        _cancelScanHold();
         _clearAcceptedFaceSnapshot();
         setState(() {
           _isSubmitting = false;
         });
+        await _resumeMonitoringAfterFaceUploadFailure();
+        if (!mounted) {
+          return;
+        }
         showAppToast(context, message, kind: AppToastKind.info);
         return;
       }
 
       _scanSession.saveFaceUpload(faceUpload);
       _clearAcceptedFaceSnapshot();
-      setState(() => _scanProgress = 1);
       await Future<void>.delayed(faceScanPostSuccessDelay);
       if (!mounted) {
         return;
@@ -508,11 +533,15 @@ class _FaceScanPageState extends State<FaceScanPage>
         return;
       }
       _pauseAutoScanUntilReset = true;
-      _cancelScanHold(resetProgress: true);
+      _cancelScanHold();
       _clearAcceptedFaceSnapshot();
       setState(() {
         _isSubmitting = false;
       });
+      await _resumeMonitoringAfterFaceUploadFailure();
+      if (!mounted) {
+        return;
+      }
       await showScanDebugErrorDialog(
         context,
         title: context.l10n.scanFaceUploadFailedTitle,
@@ -600,7 +629,7 @@ class _FaceScanPageState extends State<FaceScanPage>
     if (_isTransitioning || !mounted) return;
     _isTransitioning = true;
     _stopMonitoringOnDispose = false;
-    _cancelScanHold(resetProgress: false);
+    _cancelScanHold();
     _clearAcceptedFaceSnapshot();
     await _faceStatusSub?.cancel();
     _faceStatusSub = null;
@@ -1033,23 +1062,16 @@ class _FaceScanPageState extends State<FaceScanPage>
             left: -40,
             right: -40,
             child: Center(
-              child: (_isScanning || _isSubmitting)
-                  ? _HoldFeedback(
-                      label: _isSubmitting
-                          ? l10n.scanUploading
-                          : l10n.scanKeepStill,
-                      progress: _scanProgress,
-                    )
-                  : (_faceDirection.isNotEmpty
+              child: _showFaceBubbleStatus
+                  ? (_faceDirection.isNotEmpty
                         ? _DirectionPill(direction: _faceDirection)
                         : _StatusPill(
                             label: _hasPermission
-                                ? (showReady
-                                      ? l10n.scanFaceDetectedReady
-                                      : l10n.scanFaceAlignInFrame)
+                                ? l10n.scanFaceAlignInFrame
                                 : l10n.scanCameraPermissionRequired,
                             detected: showReady,
-                          )),
+                          ))
+                  : const SizedBox.shrink(),
             ),
           ),
         ],

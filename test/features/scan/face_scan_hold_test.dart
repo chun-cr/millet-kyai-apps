@@ -333,6 +333,21 @@ void main() {
       );
     });
 
+    test('allows the same closer face on iOS under strict framing', () {
+      const bounds = Rect.fromLTRB(0.18, 0.10, 0.82, 0.88);
+
+      expect(
+        isFaceFramedForUploadBounds(
+          bounds: bounds,
+          guideRect: guideRect,
+          area: 0.54,
+          allowHoldDrift: false,
+          platform: TargetPlatform.iOS,
+        ),
+        isTrue,
+      );
+    });
+
     test('keeps a slightly larger face alive under relaxed framing', () {
       const bounds = Rect.fromLTRB(0.19, 0.11, 0.81, 0.88);
 

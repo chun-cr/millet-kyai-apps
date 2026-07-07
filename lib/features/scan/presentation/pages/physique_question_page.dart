@@ -10,6 +10,7 @@ import '../../../../core/di/injector.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/logger.dart';
+import '../../data/sources/scan_remote_source.dart';
 import '../../../../features/profile/domain/entities/profile_me_entity.dart';
 import '../../../../features/profile/presentation/providers/profile_repository_provider.dart';
 import '../../../../features/share/domain/entities/app_id_mapping_entity.dart';
@@ -104,6 +105,10 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
         'Failed to bootstrap physique questions: $error\n$stackTrace',
       );
       if (!mounted) {
+        return;
+      }
+      if (_shouldSkipQuestionnaireOn404(error)) {
+        await _navigateToReport(_scanSession.reportId);
         return;
       }
       setState(() {
@@ -327,6 +332,10 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       if (!mounted) {
         return;
       }
+      if (_shouldSkipQuestionnaireOn404(error)) {
+        await _navigateToReport(_scanSession.reportId);
+        return;
+      }
       setState(() {
         _error = error;
         _isLoading = false;
@@ -416,6 +425,13 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       return l10n.scanQuestionLoadFailed;
     }
     return message;
+  }
+
+  bool _shouldSkipQuestionnaireOn404(Object error) {
+    if (error is ScanUploadException) {
+      return error.statusCode == 404 || error.businessCode == 404;
+    }
+    return false;
   }
 
   bool get _hasSelection => _selectedOptionValue != null;

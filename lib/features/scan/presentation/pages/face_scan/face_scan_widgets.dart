@@ -76,25 +76,6 @@ class _StatusPill extends StatelessWidget {
   );
 }
 
-class _HoldFeedback extends StatelessWidget {
-  final String label;
-  final double progress;
-
-  const _HoldFeedback({required this.label, required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _StatusPill(label: label, detected: true),
-        const SizedBox(height: 8),
-        SizedBox(width: 120, child: _ScanProgressBar(progress: progress)),
-      ],
-    );
-  }
-}
-
 class _BottomStatusPrompt extends StatelessWidget {
   final String label;
   final bool highlighted;
@@ -143,39 +124,6 @@ class _BottomStatusPrompt extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ScanProgressBar extends StatelessWidget {
-  final double progress;
-  const _ScanProgressBar({required this.progress});
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      Container(
-        height: 4,
-        decoration: BoxDecoration(
-          color: _kGreen.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      FractionallySizedBox(
-        widthFactor: progress.clamp(0.0, 1.0),
-        child: Container(
-          height: 4,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF2D8A5E), Color(0xFF3DAB78)],
-            ),
-            borderRadius: BorderRadius.circular(2),
-            boxShadow: [
-              BoxShadow(color: _kGreen.withValues(alpha: 0.35), blurRadius: 6),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
 }
 
 class _ScanCorner extends StatelessWidget {

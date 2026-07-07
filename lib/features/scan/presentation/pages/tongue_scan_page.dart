@@ -577,7 +577,10 @@ class _TongueScanPageState extends State<TongueScanPage>
       }
 
       if (tongueUpload.reportId.isEmpty) {
-        throw StateError('舌诊接口未返回 reportId。');
+        final fallbackReportId = _scanSession.reportId?.trim();
+        if (fallbackReportId == null || fallbackReportId.isEmpty) {
+          throw StateError('舌诊接口未返回 reportId。');
+        }
       }
 
       _scanSession.saveTongueUpload(tongueUpload);
@@ -643,11 +646,8 @@ class _TongueScanPageState extends State<TongueScanPage>
 
   String get _statusLabel {
     final l10n = context.l10n;
-    if (_scanState == ScanState.completed) return l10n.scanTongueCompleted;
     if (!_hasPermission) return l10n.scanCameraPermissionRequired;
-    if (_scanState == ScanState.idle) return l10n.scanTongueTapToStart;
-    if (_scanState == ScanState.uploading) return l10n.scanUploading;
-    if (_holdEligible) return l10n.scanTongueDetectedHold;
+    if (_mouthDirection.isNotEmpty) return _mouthDirection;
     if (_mouthPresent) return l10n.scanTongueMouthDetected;
     return l10n.scanTongueAlignHint;
   }
@@ -1031,11 +1031,14 @@ class _TongueScanPageState extends State<TongueScanPage>
             child: Center(
               child: _mouthDirection.isNotEmpty && !_holdEligible
                   ? _TongueDirectionPill(direction: _mouthDirection)
-                  : _StatusPill(
-                      label: _statusLabel,
-                      detected:
-                          _holdEligible || (_scanState == ScanState.completed),
-                    ),
+                  : (_scanState == ScanState.scanning &&
+                            !_holdEligible &&
+                            (_mouthPresent || !_hasPermission)
+                        ? _StatusPill(
+                            label: _statusLabel,
+                            detected: _mouthPresent,
+                          )
+                        : const SizedBox.shrink()),
             ),
           ),
         ],

@@ -128,9 +128,7 @@ bool shouldShowPalmProgressFeedback({
   required PalmScanState scanState,
   required bool readyToScan,
 }) {
-  return scanState == PalmScanState.uploading ||
-      scanState == PalmScanState.completed ||
-      (scanState == PalmScanState.scanning && readyToScan);
+  return scanState == PalmScanState.scanning && readyToScan;
 }
 
 @visibleForTesting

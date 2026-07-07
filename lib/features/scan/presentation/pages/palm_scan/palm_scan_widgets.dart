@@ -75,56 +75,6 @@ class _StatusPill extends StatelessWidget {
   );
 }
 
-class _ScanProgressBar extends StatelessWidget {
-  final double progress;
-  const _ScanProgressBar({required this.progress});
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      Container(
-        height: 4,
-        decoration: BoxDecoration(
-          color: _kAccent.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      FractionallySizedBox(
-        widthFactor: progress.clamp(0.0, 1.0),
-        child: Container(
-          height: 4,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_kAccent, _kAccentLight]),
-            borderRadius: BorderRadius.circular(2),
-            boxShadow: [
-              BoxShadow(color: _kAccent.withValues(alpha: 0.45), blurRadius: 6),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-class _PalmHoldFeedback extends StatelessWidget {
-  final String label;
-  final double progress;
-
-  const _PalmHoldFeedback({required this.label, required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _StatusPill(label: label, detected: true),
-        const SizedBox(height: 8),
-        SizedBox(width: 132, child: _ScanProgressBar(progress: progress)),
-      ],
-    );
-  }
-}
-
 class _TiltedPalmGuidePainter extends CustomPainter {
   final Color color;
   final Color accentColor;

@@ -6,9 +6,13 @@ const _kGreenLight = Color(0xFF3DAB78);
 const _kFaceStrictMinArea = 0.04;
 const _kFaceStrictMaxArea = 0.52;
 const _kFaceStrictGuideInsetFactor = 0.0;
+const _kFaceIosStrictMinArea = 0.032;
+const _kFaceIosStrictMaxArea = 0.58;
 const _kFaceRelaxedMinArea = 0.03;
 const _kFaceRelaxedMaxArea = 0.54;
 const _kFaceRelaxedGuideInsetFactor = 0.0;
+const _kFaceIosRelaxedMinArea = 0.025;
+const _kFaceIosRelaxedMaxArea = 0.60;
 
 @visibleForTesting
 const Duration faceScanHoldDuration = Duration(milliseconds: 800);
@@ -119,9 +123,15 @@ bool isFaceFramedForUploadBounds({
   required Rect guideRect,
   required double area,
   required bool allowHoldDrift,
+  TargetPlatform? platform,
 }) {
-  final minArea = allowHoldDrift ? _kFaceRelaxedMinArea : _kFaceStrictMinArea;
-  final maxArea = allowHoldDrift ? _kFaceRelaxedMaxArea : _kFaceStrictMaxArea;
+  final isIos = platform == TargetPlatform.iOS;
+  final minArea = allowHoldDrift
+      ? (isIos ? _kFaceIosRelaxedMinArea : _kFaceRelaxedMinArea)
+      : (isIos ? _kFaceIosStrictMinArea : _kFaceStrictMinArea);
+  final maxArea = allowHoldDrift
+      ? (isIos ? _kFaceIosRelaxedMaxArea : _kFaceRelaxedMaxArea)
+      : (isIos ? _kFaceIosStrictMaxArea : _kFaceStrictMaxArea);
   final guideInsetFactor = allowHoldDrift
       ? _kFaceRelaxedGuideInsetFactor
       : _kFaceStrictGuideInsetFactor;

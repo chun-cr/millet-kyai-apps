@@ -47,7 +47,13 @@ class ScanTongueUploadResult {
   Map<String, dynamic> get analysisResult => _asMap(data['analysisResult']);
   Map<String, dynamic> get tongueReport => _asMap(data['tongueReport']);
 
-  String get reportId => _asString(tongueReport['reportId']);
+  String get reportId => _firstNonEmptyString(<Object?>[
+    tongueReport['reportId'],
+    data['reportId'],
+    analysisResult['reportId'],
+    tongueReport['id'],
+    data['id'],
+  ]);
   int? get tongueReportId => _firstInt(<Object?>[
     tongueReport['tongueReportId'],
     tongueReport['id'],

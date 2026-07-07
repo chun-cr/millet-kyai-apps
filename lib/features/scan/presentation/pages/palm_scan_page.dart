@@ -65,14 +65,12 @@ class _PalmScanPageState extends State<PalmScanPage>
 
   bool _hasPermission = false;
   bool _isBackCamera = true;
-  bool _isMonitoring = false;
   bool _handPresent = false;
   bool _readyToScan = false;
   bool _handStraight = false;
   String _gestureName = '';
   bool _isTransitioning = false;
   bool _pauseAutoScanUntilReset = false;
-  double _scanProgress = 0;
   PalmScanState _scanState = PalmScanState.idle;
   List<Offset> _handLandmarks = const [];
   Size? _imageSize;
@@ -138,14 +136,12 @@ class _PalmScanPageState extends State<PalmScanPage>
     if (status.isGranted) {
       setState(() {
         _hasPermission = true;
-        _isMonitoring = true;
         _scanState = PalmScanState.scanning;
         _handPresent = false;
         _readyToScan = false;
         _handStraight = false;
         _gestureName = '';
         _pauseAutoScanUntilReset = false;
-        _scanProgress = 0;
       });
       _statusSubscription?.cancel();
       _statusSubscription = _statusBridge.statusStream().listen((status) {
@@ -187,7 +183,7 @@ class _PalmScanPageState extends State<PalmScanPage>
           _handPresent = status.handPresent;
           _readyToScan = holdSignalActive;
           _handStraight = status.handStraight;
-          _gestureName = status.gestureName;
+          _gestureName = status.normalizedGestureName;
           _handLandmarks = status.landmarks;
           _imageSize = nextImageSize;
           _palmHint =
@@ -203,7 +199,7 @@ class _PalmScanPageState extends State<PalmScanPage>
         if (_scanState != PalmScanState.scanning) return;
         if (_holdTimer != null) {
           if (!holdSignalActive) {
-            _cancelHoldTracking(resetProgress: true);
+            _cancelHoldTracking();
           }
           return;
         }
@@ -211,7 +207,7 @@ class _PalmScanPageState extends State<PalmScanPage>
         if (canHold) {
           _startHoldTracking();
         } else {
-          _cancelHoldTracking(resetProgress: true);
+          _cancelHoldTracking();
         }
       });
       unawaited(_statusBridge.startMonitoring());
@@ -287,26 +283,20 @@ class _PalmScanPageState extends State<PalmScanPage>
         return;
       }
 
-      final progress =
-          stopwatch.elapsedMilliseconds / _requiredHoldDuration.inMilliseconds;
-      if (progress >= 1) {
+      if (stopwatch.elapsedMilliseconds >=
+          _requiredHoldDuration.inMilliseconds) {
         timer.cancel();
         _holdTimer = null;
         unawaited(_captureAndUploadPalm());
         return;
       }
-
-      setState(() => _scanProgress = mapHoldProgressToVisualProgress(progress));
     });
   }
 
-  void _cancelHoldTracking({required bool resetProgress}) {
+  void _cancelHoldTracking() {
     _holdTimer?.cancel();
     _holdTimer = null;
     _lastHoldAliveAt = null;
-    if (resetProgress && mounted) {
-      setState(() => _scanProgress = 0);
-    }
   }
 
   Future<void> _captureAndUploadPalm() async {
@@ -327,7 +317,6 @@ class _PalmScanPageState extends State<PalmScanPage>
 
     setState(() {
       _scanState = PalmScanState.uploading;
-      _scanProgress = 0.65;
     });
     _lastHoldAliveAt = null;
 
@@ -347,7 +336,6 @@ class _PalmScanPageState extends State<PalmScanPage>
         return;
       }
 
-      setState(() => _scanProgress = 0.68);
       final handFrameFilePath = await _buildPalmFrameUploadPath(
         capture: capture,
         captureGuideRect: captureGuideRect,
@@ -367,15 +355,6 @@ class _PalmScanPageState extends State<PalmScanPage>
         handFilePath: capture.croppedPath,
         handFrameFilePath: handFrameFilePath,
         reportId: reportId,
-        onSendProgress: (sent, total) {
-          if (!mounted) {
-            return;
-          }
-          final progress = total > 0 ? sent / total : (sent > 0 ? 0.5 : 0.0);
-          setState(
-            () => _scanProgress = mapUploadProgressToVisualProgress(progress),
-          );
-        },
       );
 
       if (!mounted) {
@@ -384,9 +363,7 @@ class _PalmScanPageState extends State<PalmScanPage>
 
       _scanSession.saveReportId(reportId);
       setState(() {
-        _isMonitoring = false;
         _scanState = PalmScanState.completed;
-        _scanProgress = 1;
       });
       await _navigateToQuestionnaireAfterDelay();
     } on Object catch (error, stackTrace) {
@@ -395,7 +372,7 @@ class _PalmScanPageState extends State<PalmScanPage>
         return;
       }
       _pauseAutoScanUntilReset = true;
-      _cancelHoldTracking(resetProgress: true);
+      _cancelHoldTracking();
       setState(() {
         _scanState = PalmScanState.scanning;
       });
@@ -472,45 +449,13 @@ class _PalmScanPageState extends State<PalmScanPage>
   String _statusText() {
     final l10n = context.l10n;
     if (!_hasPermission) return l10n.scanPalmWaitingPermission;
-    if (_scanState == PalmScanState.completed) return l10n.scanPalmCompleted;
-    if (_scanState == PalmScanState.uploading) return l10n.scanUploading;
-    if (_readyToScan) return l10n.scanPalmReadyHold;
     if (_gestureName == 'Open_Palm' && !_handStraight) {
       return l10n.scanPalmOpenDetectedStraighten;
-    }
-    final localizedGesture = _localizedGestureName(_gestureName);
-    if (localizedGesture.isNotEmpty) {
-      return l10n.scanPalmDetectedGesture(localizedGesture);
     }
     if (_handPresent) {
       return l10n.scanPalmStretchOpen;
     }
-    if (_isMonitoring) {
-      return l10n.scanPalmAlignHint;
-    }
     return l10n.scanPalmAlignHint;
-  }
-
-  String _localizedGestureName(String rawName) {
-    final l10n = context.l10n;
-    switch (rawName) {
-      case 'Open_Palm':
-        return l10n.scanGestureOpenPalm;
-      case 'Closed_Fist':
-        return l10n.scanGestureClosedFist;
-      case 'Victory':
-        return l10n.scanGestureVictory;
-      case 'Thumb_Up':
-        return l10n.scanGestureThumbUp;
-      case 'Thumb_Down':
-        return l10n.scanGestureThumbDown;
-      case 'Pointing_Up':
-        return l10n.scanGesturePointingUp;
-      case 'ILoveYou':
-        return l10n.scanGestureILoveYou;
-      default:
-        return rawName;
-    }
   }
 
   // ─── Build ───────────────────────────────────────────────────────
@@ -834,28 +779,15 @@ class _PalmScanPageState extends State<PalmScanPage>
             left: -40,
             right: -40,
             child: Center(
-              child:
-                  shouldShowPalmProgressFeedback(
-                    scanState: _scanState,
-                    readyToScan: _readyToScan,
-                  )
-                  ? _PalmHoldFeedback(
-                      label: _scanState == PalmScanState.completed
-                          ? context.l10n.scanPalmCompleted
-                          : _scanState == PalmScanState.uploading
-                          ? context.l10n.scanUploading
-                          : context.l10n.scanPalmReadyHold,
-                      progress: _scanProgress,
-                    )
-                  : (_palmHint.isNotEmpty &&
+              child: _scanState == PalmScanState.scanning && !_readyToScan
+                  ? (_palmHint.isNotEmpty &&
                             !(_gestureName == 'Open_Palm' && !_handStraight)
                         ? _PalmDirectionPill(hint: _palmHint)
                         : _StatusPill(
                             label: _statusText(),
-                            detected:
-                                _readyToScan ||
-                                _scanState == PalmScanState.completed,
-                          )),
+                            detected: _handPresent,
+                          ))
+                  : const SizedBox.shrink(),
             ),
           ),
         ],

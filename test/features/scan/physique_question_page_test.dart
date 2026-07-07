@@ -7,6 +7,7 @@ import 'package:millet_kyai_apps/features/scan/data/models/physique_question_mod
 import 'package:millet_kyai_apps/features/scan/data/models/scan_session.dart';
 import 'package:millet_kyai_apps/features/scan/data/models/scan_upload_result.dart';
 import 'package:millet_kyai_apps/features/scan/data/sources/physique_question_remote_source.dart';
+import 'package:millet_kyai_apps/features/scan/data/sources/scan_remote_source.dart';
 import 'package:millet_kyai_apps/features/scan/presentation/pages/physique_question_page.dart';
 import 'package:millet_kyai_apps/features/share/domain/entities/app_id_mapping_entity.dart';
 import 'package:millet_kyai_apps/l10n/app_localizations.dart';
@@ -27,10 +28,24 @@ class _RecordingPhysiqueQuestionRemoteSource
   }
 }
 
+class _ThrowingPhysiqueQuestionRemoteSource
+    extends PhysiqueQuestionRemoteSource {
+  _ThrowingPhysiqueQuestionRemoteSource(this._error) : super(DioClient());
+
+  final Object _error;
+
+  @override
+  Future<PhysiqueQuestionEnvelope> fetchNextQuestion(
+    PhysiqueQuestionRequest request,
+  ) async {
+    throw _error;
+  }
+}
+
 Future<void> _pumpQuestionPage(
   WidgetTester tester, {
   required ScanSession scanSession,
-  required _RecordingPhysiqueQuestionRemoteSource remoteSource,
+  required PhysiqueQuestionRemoteSource remoteSource,
   required Future<void> Function(String? reportId) onNavigate,
 }) async {
   await tester.pumpWidget(
@@ -118,6 +133,32 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('scan_question_skip_button')));
     await tester.pump();
+
+    expect(navigatedReportId, 'report-123');
+  });
+
+  testWidgets('bootstrap 404 skips questionnaire and opens report directly', (
+    tester,
+  ) async {
+    final scanSession = _buildScanSession();
+    final remoteSource = _ThrowingPhysiqueQuestionRemoteSource(
+      const ScanUploadException(
+        stage: 'physique_question',
+        path: '/api/questionnaire',
+        message: 'Not Found',
+        statusCode: 404,
+      ),
+    );
+
+    String? navigatedReportId;
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (reportId) async => navigatedReportId = reportId,
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(navigatedReportId, 'report-123');
   });

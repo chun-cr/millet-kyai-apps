@@ -55,6 +55,21 @@ void main() {
       expect(status.landmarks, const [Offset(0.2, 0.3), Offset(0.4, 0.5)]);
     });
 
+    test('normalizes a native null gesture name into empty text', () {
+      final status = PalmScanStatus.fromEvent({
+        'gestureDetected': false,
+        'handStraight': false,
+        'gestureName': 'null',
+        'score': 0.2,
+        'handLandmarks': const [
+          {'x': 0.2, 'y': 0.3},
+        ],
+      });
+
+      expect(status.gestureName, isEmpty);
+      expect(status.normalizedGestureName, isEmpty);
+    });
+
     test(
       'accepts strong open palm score even before native debounce flips',
       () {
@@ -347,23 +362,23 @@ void main() {
       );
     });
 
-    test('keeps progress visible while palm upload is running', () {
+    test('hides bubble progress while palm upload is running', () {
       expect(
         shouldShowPalmProgressFeedback(
           scanState: PalmScanState.uploading,
           readyToScan: false,
         ),
-        isTrue,
+        isFalse,
       );
     });
 
-    test('keeps full progress visible during completed dwell', () {
+    test('hides bubble progress after palm scan completes', () {
       expect(
         shouldShowPalmProgressFeedback(
           scanState: PalmScanState.completed,
           readyToScan: false,
         ),
-        isTrue,
+        isFalse,
       );
     });
 

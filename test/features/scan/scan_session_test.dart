@@ -49,4 +49,17 @@ void main() {
       expect(missing.missingTongue, isTrue);
     },
   );
+
+  test(
+    'tongue upload falls back to tongueReport.id for report id persistence',
+    () {
+      const upload = ScanTongueUploadResult(<String, dynamic>{
+        'tongueReport': <String, dynamic>{'id': 789},
+      });
+      final session = ScanSession()..saveTongueUpload(upload);
+
+      expect(upload.reportId, '789');
+      expect(session.reportId, '789');
+    },
+  );
 }

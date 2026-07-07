@@ -34,6 +34,14 @@ class PalmScanStatus {
           gestureDetected ||
           (gestureName == 'Open_Palm' && score >= _openPalmScoreThreshold));
 
+  String get normalizedGestureName {
+    final trimmed = gestureName.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+      return '';
+    }
+    return trimmed;
+  }
+
   factory PalmScanStatus.fromEvent(dynamic event) {
     if (event is! Map) {
       return const PalmScanStatus(
@@ -68,12 +76,20 @@ class PalmScanStatus {
       handPresent: handLandmarks is List && handLandmarks.isNotEmpty,
       gestureDetected: data['gestureDetected'] as bool? ?? false,
       handStraight: data['handStraight'] as bool? ?? false,
-      gestureName: data['gestureName'] as String? ?? '',
+      gestureName: _normalizeGestureName(data['gestureName']),
       score: (data['score'] as num?)?.toDouble() ?? 0,
       imageWidth: (data['imageWidth'] as num?)?.toDouble() ?? 0,
       imageHeight: (data['imageHeight'] as num?)?.toDouble() ?? 0,
       landmarks: landmarks,
     );
+  }
+
+  static String _normalizeGestureName(dynamic rawValue) {
+    final value = rawValue?.toString().trim() ?? '';
+    if (value.isEmpty || value.toLowerCase() == 'null') {
+      return '';
+    }
+    return value;
   }
 }
 
