@@ -16,7 +16,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, APP_INFO_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "getAppId" -> result.success(BuildConfig.APPLICATION_ID)
+                    "getAppId" -> result.success(applicationContext.packageName)
                     else -> result.notImplemented()
                 }
             }

@@ -41,7 +41,7 @@ void main() {
     expect(find.byKey(const ValueKey('send_code_button')), findsOneWidget);
     expect(find.byKey(const ValueKey('login_wechat_button')), findsOneWidget);
     expect(find.byKey(const ValueKey('login_email_button')), findsOneWidget);
-    expect(find.text('微信小程序登�?), findsOneWidget);
+    expect(find.text('微信小程序登录'), findsOneWidget);
     expect(find.text(l10n.authEmailLogin), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('login_email_button')));

@@ -445,6 +445,7 @@
   "scanTipBrightLight": "Use bright, even lighting",
   "scanTipKeepSteady": "Keep steady during the scan",
   "scanScanning": "Scanning",
+  "scanUploading": "Uploading",
   "scanFaceAlignInFrame": "Align your face inside the frame",
   "scanFaceDetectedReady": "Face aligned ✓",
   "scanFaceTitle": "Face Scan",

@@ -68,6 +68,11 @@ class ScanTongueUploadResult {
     return analysisResult['success'] == true &&
         analysisResult['hasTongue'] == false;
   }
+
+  bool get analysisFailed {
+    return analysisResult.containsKey('success') &&
+        analysisResult['success'] != true;
+  }
 }
 
 class ScanPalmUploadResult {

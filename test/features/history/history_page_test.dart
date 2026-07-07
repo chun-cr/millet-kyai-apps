@@ -30,7 +30,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../report/report_test_data.dart';
 
 class _HistoryReportsAdapter implements HttpClientAdapter {
-  _HistoryReportsAdapter({required this.reportDetailRaw, this.expectedTopOrgId});
+  _HistoryReportsAdapter({
+    required this.reportDetailRaw,
+    this.expectedTopOrgId,
+  });
 
   final Map<String, dynamic> reportDetailRaw;
   final int? expectedTopOrgId;
@@ -187,7 +190,8 @@ Future<void> _pumpHistoryPage(
   WidgetTester tester, {
   List<DiagnosisRecord> records = const <DiagnosisRecord>[],
   Future<List<DiagnosisRecord>> Function()? loadHistoryRecords,
-  List<Override> providerOverrides = const <Override>[],
+  HistoryRecordsPageLoader? loadHistoryRecordsPage,
+  Widget Function(Widget child)? wrapPage,
 }) async {
   await tester.binding.setSurfaceSize(const Size(1280, 2400));
 
@@ -203,14 +207,11 @@ Future<void> _pumpHistoryPage(
     home: HistoryReportPage(
       records: records,
       loadHistoryRecords: loadHistoryRecords,
+      loadHistoryRecordsPage: loadHistoryRecordsPage,
     ),
   );
 
-  await tester.pumpWidget(
-    providerOverrides.isEmpty
-        ? page
-        : ProviderScope(overrides: providerOverrides, child: page),
-  );
+  await tester.pumpWidget(wrapPage == null ? page : wrapPage(page));
 }
 
 Future<void> _tearDownHistoryPage(WidgetTester tester) async {
@@ -485,8 +486,80 @@ void main() {
     await _tearDownHistoryPage(tester);
   });
 
+  testWidgets('history page appends records through paged loader', (
+    tester,
+  ) async {
+    final requestedPages = <int>[];
+    final secondPageCompleter = Completer<HistoryRecordsPage>();
+
+    await _pumpHistoryPage(
+      tester,
+      loadHistoryRecordsPage: ({required pageNo, required pageSize}) async {
+        requestedPages.add(pageNo);
+        expect(pageSize, 20);
+        if (pageNo == 1) {
+          return HistoryRecordsPage(
+            records: [
+              _buildRecord(
+                id: 'record-page-1',
+                constitutionLabel: 'Balanced',
+                date: DateTime(2026, 4, 13),
+                isUnlocked: true,
+              ),
+            ],
+            hasMore: true,
+          );
+        }
+
+        return secondPageCompleter.future;
+      },
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(requestedPages, [1]);
+    expect(find.text('Balanced'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('history_load_more_button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('history_load_more_button')));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('history_load_more_indicator')),
+      findsOneWidget,
+    );
+
+    secondPageCompleter.complete(
+      HistoryRecordsPage(
+        records: [
+          _buildRecord(
+            id: 'record-page-2',
+            constitutionLabel: 'Qi Deficiency',
+            date: DateTime(2026, 4, 14),
+            isUnlocked: true,
+          ),
+        ],
+        hasMore: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requestedPages, [1, 2]);
+    expect(find.text('Balanced'), findsOneWidget);
+    expect(find.text('Qi Deficiency'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('history_load_more_button')),
+      findsNothing,
+    );
+
+    await _tearDownHistoryPage(tester);
+  });
+
   testWidgets('history page retries after loader failure', (tester) async {
     var attempts = 0;
+    final retryCompleter = Completer<List<DiagnosisRecord>>();
 
     await _pumpHistoryPage(
       tester,
@@ -495,14 +568,7 @@ void main() {
         if (attempts == 1) {
           return Future<List<DiagnosisRecord>>.error(StateError('load failed'));
         }
-        return Future<List<DiagnosisRecord>>.value(<DiagnosisRecord>[
-          _buildRecord(
-            id: 'record-retry',
-            constitutionLabel: 'Qi Deficiency',
-            date: DateTime(2026, 4, 14),
-            isUnlocked: true,
-          ),
-        ]);
+        return retryCompleter.future;
       },
     );
 
@@ -517,6 +583,14 @@ void main() {
     expect(find.byKey(const ValueKey('history_loading')), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
+    retryCompleter.complete(<DiagnosisRecord>[
+      _buildRecord(
+        id: 'record-retry',
+        constitutionLabel: 'Qi Deficiency',
+        date: DateTime(2026, 4, 14),
+        isUnlocked: true,
+      ),
+    ]);
     await tester.pumpAndSettle();
 
     expect(attempts, 2);
@@ -582,11 +656,14 @@ void main() {
 
       await _pumpHistoryPage(
         tester,
-        providerOverrides: [
-          shareReferralRepositoryProvider.overrideWithValue(
-            const _HistoryShareReferralRepository(),
-          ),
-        ],
+        wrapPage: (page) => ProviderScope(
+          overrides: [
+            shareReferralRepositoryProvider.overrideWithValue(
+              const _HistoryShareReferralRepository(),
+            ),
+          ],
+          child: page,
+        ),
       );
       await tester.pumpAndSettle();
 

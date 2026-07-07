@@ -101,6 +101,8 @@ class ScanRemoteSource {
   ScanRemoteSource(this._dioClient);
 
   static const reportSource = 'KY_MA';
+  static const _scanUploadSendTimeout = Duration(seconds: 30);
+  static const _scanUploadReceiveTimeout = Duration(seconds: 120);
   static const _scanUploadRequestExtra = <String, dynamic>{
     DioClient.skipPlatformHeadersExtraKey: true,
   };
@@ -241,7 +243,11 @@ class ScanRemoteSource {
   }
 
   Options _scanUploadOptions() {
-    return Options(extra: Map<String, dynamic>.from(_scanUploadRequestExtra));
+    return Options(
+      sendTimeout: _scanUploadSendTimeout,
+      receiveTimeout: _scanUploadReceiveTimeout,
+      extra: Map<String, dynamic>.from(_scanUploadRequestExtra),
+    );
   }
 
   Map<String, dynamic> _extractSuccessPayload({

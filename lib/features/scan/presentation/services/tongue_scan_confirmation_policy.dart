@@ -13,6 +13,10 @@ enum TongueDetectionTuning { standard, android }
 class TongueProtrusionProxy {
   static const double _minMouthAspectRatio = 0.16;
   static const double _maxMouthAspectRatio = 0.78;
+  static const double _miniProgramLipGapRatio = 0.03;
+  static const int _nativeMouthLandmarkCount = 13;
+  static const int _upperLipMouthIndex = 11;
+  static const int _lowerLipMouthIndex = 12;
   static const double _centerBandFactor = 0.18;
   static const double _sideBandFactor = 0.24;
 
@@ -42,6 +46,10 @@ class TongueProtrusionProxy {
     if (mouthAspectRatio < _minMouthAspectRatio ||
         mouthAspectRatio > _maxMouthAspectRatio) {
       return false;
+    }
+
+    if (_hasMiniProgramStyleLipGap(mouthLandmarks)) {
+      return true;
     }
 
     final center = mouthCenter;
@@ -103,6 +111,17 @@ class TongueProtrusionProxy {
     return centralDropRatio >= thresholds.minSupportedCentralDropRatio &&
         centralDropToHeightRatio >=
             thresholds.minSupportedCentralDropToHeightRatio;
+  }
+
+  static bool _hasMiniProgramStyleLipGap(List<Offset> mouthLandmarks) {
+    if (mouthLandmarks.length < _nativeMouthLandmarkCount) {
+      return false;
+    }
+
+    final upperLip = mouthLandmarks[_upperLipMouthIndex];
+    final lowerLip = mouthLandmarks[_lowerLipMouthIndex];
+    final lipGapRatio = (lowerLip.dy - upperLip.dy).abs();
+    return lipGapRatio > _miniProgramLipGapRatio;
   }
 }
 

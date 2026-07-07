@@ -1084,6 +1084,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get scanScanning => '스캔 중';
 
   @override
+  String get scanUploading => '업로드 중';
+
+  @override
   String get scanFaceAlignInFrame => '얼굴을 프레임 안에 맞춰 주세요';
 
   @override

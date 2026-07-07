@@ -805,6 +805,7 @@
   "scanTipBrightLight": "明るく均一な光で行ってください",
   "scanTipKeepSteady": "スキャン中は安定した姿勢を保ってください",
   "scanScanning": "スキャン中",
+  "scanUploading": "アップロード中",
   "scanFaceAlignInFrame": "顔をフレーム内に合わせてください",
   "scanFaceDetectedReady": "顔を認識しました ✓",
   "scanFaceTitle": "顔スキャン",

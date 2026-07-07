@@ -7,7 +7,7 @@ void main() {
   test('DiagnosisNamedProbability keeps raw and percent-like probability', () {
     final detail = buildDiagnosisReportDetail(
       categoryProbabilities: [
-        {'name': '神志精神及情�?, 'prob': 0.89},
+        {'name': '神志精神及情绪', 'prob': 0.89},
         {'name': '饮食习惯', 'prob': 1.0},
       ],
     );
@@ -29,7 +29,7 @@ void main() {
         categoryProbabilities: const [],
         riskIndexes: [
           {'displayName': '作息睡眠', 'score': 69},
-          {'name': '消化�?, 'score': 41},
+          {'name': '消化道', 'score': 41},
         ],
       );
 
@@ -40,7 +40,7 @@ void main() {
       expect(probabilities.first.name, '作息睡眠');
       expect(probabilities.first.rawProbability, closeTo(0.69, 0.0001));
       expect(probabilities.first.probability, closeTo(69, 0.0001));
-      expect(probabilities.last.name, '消化�?);
+      expect(probabilities.last.name, '消化道');
       expect(probabilities.last.rawProbability, closeTo(0.41, 0.0001));
       expect(probabilities.last.probability, closeTo(41, 0.0001));
     },

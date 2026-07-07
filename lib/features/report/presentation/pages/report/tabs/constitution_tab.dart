@@ -1,6 +1,6 @@
 part of '../report_page.dart';
 
-class _Tab2Constitution extends StatelessWidget {
+class _Tab2Constitution extends StatefulWidget {
   final ReportViewData viewData;
   final bool isUnlocked;
   final Future<void> Function() onUnlock;
@@ -12,12 +12,78 @@ class _Tab2Constitution extends StatelessWidget {
   });
 
   @override
+  State<_Tab2Constitution> createState() => _Tab2ConstitutionState();
+}
+
+class _Tab2ConstitutionState extends State<_Tab2Constitution>
+    with SingleTickerProviderStateMixin {
+  Future<List<Map<String, dynamic>>>? _therapyFuture;
+  String? _therapySignature;
+  late final AnimationController _radarController;
+  late final Animation<double> _radarProgress;
+  late String _radarSignature;
+
+  ReportViewData get viewData => widget.viewData;
+  bool get isUnlocked => widget.isUnlocked;
+  Future<void> Function() get onUnlock => widget.onUnlock;
+
+  @override
+  void initState() {
+    super.initState();
+    _radarController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _radarProgress = CurvedAnimation(
+      parent: _radarController,
+      curve: Curves.easeOutCubic,
+    );
+    _radarSignature = _constitutionRadarSignature(widget.viewData);
+    _radarController.forward();
+    _syncTherapyFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _Tab2Constitution oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextRadarSignature = _constitutionRadarSignature(widget.viewData);
+    if (_radarSignature != nextRadarSignature) {
+      _radarSignature = nextRadarSignature;
+      _radarController.forward(from: 0);
+    }
+    _syncTherapyFuture();
+  }
+
+  @override
+  void dispose() {
+    _radarController.dispose();
+    super.dispose();
+  }
+
+  void _syncTherapyFuture() {
+    final signature = _therapyQuerySignature(widget.viewData);
+    if (signature == null) {
+      _therapyFuture = null;
+      _therapySignature = null;
+      return;
+    }
+    if (_therapySignature == signature) {
+      return;
+    }
+    _therapySignature = signature;
+    try {
+      _therapyFuture = _loadTherapiesForDominantConstitution(widget.viewData);
+    } catch (_) {
+      _therapyFuture = Future.value(const <Map<String, dynamic>>[]);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return ListView(
+    return AppResponsiveListView(
       physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       children: [
         _buildConstitutionDetail(context),
         const SizedBox(height: 20),
@@ -45,6 +111,9 @@ class _Tab2Constitution extends StatelessWidget {
   // ── 体质详解 ─────────────────────────────────────────────────────
   Widget _buildConstitutionDetail(BuildContext context) {
     final l10n = context.l10n;
+    final coreConclusionValue = _constitutionCoreConclusionValue(context);
+    final constitutionScores = _constitutionScores(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -77,9 +146,18 @@ class _Tab2Constitution extends StatelessWidget {
                             ),
                           ),
                         ),
-                        CustomPaint(
-                          size: const Size(140, 140),
-                          painter: _ConstitutionRadarPainter(),
+                        AnimatedBuilder(
+                          animation: _radarProgress,
+                          builder: (context, child) {
+                            return CustomPaint(
+                              key: const ValueKey('report_constitution_radar'),
+                              size: const Size(140, 140),
+                              painter: _ConstitutionRadarPainter(
+                                scores: constitutionScores,
+                                progress: _radarProgress.value,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -104,7 +182,7 @@ class _Tab2Constitution extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            l10n.reportConstitutionCoreConclusionValue,
+                            coreConclusionValue,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -113,16 +191,7 @@ class _Tab2Constitution extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            l10n.reportConstitutionCoreConclusionBody,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: const Color(
-                                0xFF3A3028,
-                              ).withValues(alpha: 0.65),
-                              height: 1.65,
-                            ),
-                          ),
+                          _buildCoreConclusionBody(context),
                         ],
                       ),
                     ),
@@ -137,19 +206,32 @@ class _Tab2Constitution extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
-                  children: _constitutionScores(context)
-                      .map(
-                        (c) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _ConstitutionScoreRow(
-                            label: c.$1,
-                            score: c.$2,
-                            color: c.$3,
-                            isMain: c.$4,
+                  children: constitutionScores.isEmpty
+                      ? [
+                          Text(
+                            '暂无体质分数数据。',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(
+                                0xFF3A3028,
+                              ).withValues(alpha: 0.55),
+                              height: 1.5,
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
+                        ]
+                      : constitutionScores
+                            .map(
+                              (c) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _ConstitutionScoreRow(
+                                  label: c.$1,
+                                  score: c.$2,
+                                  color: c.$3,
+                                  isMain: c.$4,
+                                ),
+                              ),
+                            )
+                            .toList(),
                 ),
               ),
             ],
@@ -159,10 +241,106 @@ class _Tab2Constitution extends StatelessWidget {
     );
   }
 
+  String _constitutionRadarSignature(ReportViewData viewData) {
+    if (viewData.constitutionScores.isEmpty) {
+      return 'fallback';
+    }
+    return viewData.constitutionScores
+        .map(
+          (item) =>
+              '${item.id}|${item.name}|${item.scorePercent.toStringAsFixed(3)}',
+        )
+        .join(';');
+  }
+
+  String _constitutionCoreConclusionValue(BuildContext context) {
+    final name =
+        (viewData.constitutionScores.isNotEmpty
+            ? _nonEmpty(viewData.constitutionScores.first.name)
+            : null) ??
+        _nonEmpty(viewData.primaryConstitution);
+    if (name == null) {
+      return context.l10n.reportConstitutionCoreConclusionValue;
+    }
+    return '主导偏颇体质：$name';
+  }
+
+  Widget _buildCoreConclusionBody(BuildContext context) {
+    final fallbackText = context.l10n.reportConstitutionCoreConclusionBody;
+    final future = _therapyFuture;
+    if (future == null) {
+      return _coreConclusionBodyText(
+        context,
+        viewData.isLive ? '暂无体质特征与调理原则数据。' : fallbackText,
+      );
+    }
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _coreConclusionBodyText(context, '正在读取体质特征与调理原则...');
+        }
+        if (snapshot.hasError) {
+          return _coreConclusionBodyText(context, '体质特征与调理原则暂未加载成功。');
+        }
+
+        final therapyText = _therapyFeaturePrincipleText(
+          snapshot.data ?? const <Map<String, dynamic>>[],
+        );
+        return _coreConclusionBodyText(
+          context,
+          therapyText ?? '暂无体质特征与调理原则数据。',
+        );
+      },
+    );
+  }
+
+  Widget _coreConclusionBodyText(BuildContext context, String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 12,
+        color: const Color(0xFF3A3028).withValues(alpha: 0.65),
+        height: 1.65,
+      ),
+    );
+  }
+
+  String? _therapyFeaturePrincipleText(List<Map<String, dynamic>> therapies) {
+    String? feature;
+    String? principle;
+    for (final therapy in therapies) {
+      feature ??= _firstNonEmptyText(therapy, const [
+        'feature',
+        'features',
+        'physiqueFeature',
+      ]);
+      principle ??= _firstNonEmptyText(therapy, const [
+        'principle',
+        'principles',
+        'therapyPrinciple',
+      ]);
+      if (feature != null && principle != null) {
+        break;
+      }
+    }
+
+    if (feature == null && principle == null) {
+      return null;
+    }
+    return [
+      if (feature != null) '体质特征：$feature',
+      if (principle != null) '调理原则：$principle',
+    ].join('\n');
+  }
+
   List<(String, double, Color, bool)> _constitutionScores(
     BuildContext context,
   ) {
-    final liveScores = viewData.constitutionScores;
+    final liveScores = viewData.constitutionScores
+        .where((item) => item.hasScore)
+        .toList(growable: false);
     if (liveScores.isNotEmpty) {
       return [
         for (var index = 0; index < liveScores.length; index++)
@@ -173,6 +351,10 @@ class _Tab2Constitution extends StatelessWidget {
             index < 2,
           ),
       ];
+    }
+
+    if (viewData.isLive) {
+      return const <(String, double, Color, bool)>[];
     }
 
     return [

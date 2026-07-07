@@ -112,64 +112,79 @@ class _RiskIndexRingPainter extends CustomPainter {
 }
 
 class _ConstitutionRadarPainter extends CustomPainter {
+  const _ConstitutionRadarPainter({
+    required this.scores,
+    required this.progress,
+  });
+
+  final List<(String, double, Color, bool)> scores;
+  final double progress;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = size.width / 2 - 8;
-    const sides = 9;
+    final center = Offset(size.width / 2, size.height / 2);
+    final r = math.min(size.width, size.height) / 2 - 9;
+    final sides = math.max(3, scores.length);
+    final clampedProgress = progress.clamp(0.0, 1.0).toDouble();
+    final dominantColor = scores.isNotEmpty
+        ? scores.first.$3
+        : const Color(0xFF2D6A4F);
 
     canvas.drawCircle(
-      Offset(cx, cy),
+      center,
       r * 0.72,
       Paint()
-        ..shader =
-            RadialGradient(
-              colors: [
-                const Color(0xFF8FC7A5).withValues(alpha: 0.16),
-                const Color(0xFFC9A84C).withValues(alpha: 0.05),
-                Colors.transparent,
-              ],
-              stops: const [0.0, 0.58, 1.0],
-            ).createShader(
-              Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.9),
-            ),
+        ..shader = RadialGradient(
+          colors: [
+            dominantColor.withValues(alpha: 0.16),
+            const Color(0xFFC9A84C).withValues(alpha: 0.05),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.58, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: r * 0.9)),
     );
 
     for (int ring = 1; ring <= 4; ring++) {
       final rr = r * ring / 4;
       final path = Path();
       for (int i = 0; i < sides; i++) {
-        final angle = i * 2 * math.pi / sides - math.pi / 2;
-        final x = cx + math.cos(angle) * rr;
-        final y = cy + math.sin(angle) * rr;
+        final point = _axisPoint(center, rr, i, sides);
         if (i == 0) {
-          path.moveTo(x, y);
+          path.moveTo(point.dx, point.dy);
         } else {
-          path.lineTo(x, y);
+          path.lineTo(point.dx, point.dy);
         }
       }
       path.close();
       canvas.drawPath(
         path,
         Paint()
-          ..color = const Color(0xFF2D6A4F).withValues(alpha: 0.07)
+          ..color = dominantColor.withValues(alpha: 0.07)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 0.8,
       );
     }
 
-    const scores = [0.72, 0.58, 0.25, 0.20, 0.30, 0.18, 0.15, 0.22, 0.10];
+    for (int i = 0; i < sides; i++) {
+      canvas.drawLine(
+        center,
+        _axisPoint(center, r, i, sides),
+        Paint()
+          ..color = dominantColor.withValues(alpha: 0.1)
+          ..strokeWidth = 0.8,
+      );
+    }
+
     final dataPath = Path();
     for (int i = 0; i < sides; i++) {
-      final angle = i * 2 * math.pi / sides - math.pi / 2;
-      final rr = r * scores[i];
-      final x = cx + math.cos(angle) * rr;
-      final y = cy + math.sin(angle) * rr;
+      final value = i < scores.length
+          ? scores[i].$2.clamp(0.0, 1.0).toDouble()
+          : 0.0;
+      final point = _axisPoint(center, r * value * clampedProgress, i, sides);
       if (i == 0) {
-        dataPath.moveTo(x, y);
+        dataPath.moveTo(point.dx, point.dy);
       } else {
-        dataPath.lineTo(x, y);
+        dataPath.lineTo(point.dx, point.dy);
       }
     }
     dataPath.close();
@@ -177,29 +192,34 @@ class _ConstitutionRadarPainter extends CustomPainter {
     canvas.drawPath(
       dataPath,
       Paint()
-        ..color = const Color(0xFF2D6A4F).withValues(alpha: 0.15)
+        ..shader = RadialGradient(
+          colors: [
+            dominantColor.withValues(alpha: 0.2),
+            dominantColor.withValues(alpha: 0.08),
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: r))
         ..style = PaintingStyle.fill,
     );
     canvas.drawPath(
       dataPath,
       Paint()
-        ..color = const Color(0xFF2D6A4F).withValues(alpha: 0.6)
+        ..color = dominantColor.withValues(alpha: 0.66)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
+  }
 
-    for (int i = 0; i < sides; i++) {
-      final angle = i * 2 * math.pi / sides - math.pi / 2;
-      canvas.drawLine(
-        Offset(cx, cy),
-        Offset(cx + math.cos(angle) * r, cy + math.sin(angle) * r),
-        Paint()
-          ..color = const Color(0xFF2D6A4F).withValues(alpha: 0.1)
-          ..strokeWidth = 0.8,
-      );
-    }
+  Offset _axisPoint(Offset center, double radius, int index, int sides) {
+    final angle = index * 2 * math.pi / sides - math.pi / 2;
+    return Offset(
+      center.dx + math.cos(angle) * radius,
+      center.dy + math.sin(angle) * radius,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ConstitutionRadarPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        !listEquals(oldDelegate.scores, scores);
+  }
 }

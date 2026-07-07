@@ -37,16 +37,16 @@ void main() {
 
   testWidgets('constitution labels localize across locales', (tester) async {
     final zhContext = await pumpLocalizedContext(tester, const Locale('zh'));
-    expect(ConstitutionType.balanced.label(zhContext), '平和�?);
+    expect(ConstitutionType.balanced.label(zhContext), '平和质');
 
     final enContext = await pumpLocalizedContext(tester, const Locale('en'));
     expect(ConstitutionType.balanced.label(enContext), 'Balanced');
 
     final jaContext = await pumpLocalizedContext(tester, const Locale('ja'));
-    expect(ConstitutionType.qiDeficiency.label(jaContext), '気虚�?);
+    expect(ConstitutionType.qiDeficiency.label(jaContext), '気虚質');
 
     final koContext = await pumpLocalizedContext(tester, const Locale('ko'));
-    expect(ConstitutionType.dampness.label(koContext), '담습�?);
+    expect(ConstitutionType.dampness.label(koContext), '담습질');
   });
 
   testWidgets('risk labels localize across locales', (tester) async {

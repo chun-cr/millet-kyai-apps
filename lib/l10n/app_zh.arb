@@ -439,6 +439,7 @@
   "scanTipBrightLight": "光线充足",
   "scanTipKeepSteady": "保持稳定",
   "scanScanning": "扫描中…",
+  "scanUploading": "上传中…",
   "scanFaceAlignInFrame": "请将面部对准框内",
   "scanFaceDetectedReady": "面部已就位 ✓",
   "scanFaceTitle": "面部望诊",

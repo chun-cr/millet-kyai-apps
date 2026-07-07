@@ -1069,6 +1069,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get scanScanning => '扫描中…';
 
   @override
+  String get scanUploading => '上传中…';
+
+  @override
   String get scanFaceAlignInFrame => '请将面部对准框内';
 
   @override

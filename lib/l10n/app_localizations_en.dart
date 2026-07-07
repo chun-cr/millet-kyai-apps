@@ -1135,6 +1135,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanScanning => 'Scanning';
 
   @override
+  String get scanUploading => 'Uploading';
+
+  @override
   String get scanFaceAlignInFrame => 'Align your face inside the frame';
 
   @override

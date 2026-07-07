@@ -32,7 +32,7 @@ class _FailingRegisterAuthRepository extends AuthRepositoryAdapter {
         requestOptions: RequestOptions(
           path: '/api/v1/saas/mobile/auth/register/password',
         ),
-        data: {'message': '该手机号已注�?},
+        data: {'message': '该手机号已注册'},
         statusCode: 409,
       ),
     );
@@ -88,7 +88,7 @@ class _FailingRegisterAuthRepository extends AuthRepositoryAdapter {
         requestOptions: RequestOptions(
           path: '/api/v1/saas/mobile/auth/login-or-register/verification-code',
         ),
-        data: {'message': '验证码错�?},
+        data: {'message': '验证码错误'},
         statusCode: 400,
       ),
     );
@@ -233,8 +233,8 @@ void main() {
   testWidgets('register page focuses on account creation only', (tester) async {
     await _pumpRegisterPage(tester);
 
-    expect(find.text('手机�?), findsOneWidget);
-    expect(find.text('验证�?), findsOneWidget);
+    expect(find.text('手机号'), findsOneWidget);
+    expect(find.text('验证码'), findsOneWidget);
     expect(find.text('微信'), findsNothing);
     expect(find.text('Apple 登录'), findsNothing);
     expect(find.text('昵称'), findsNothing);
@@ -255,7 +255,7 @@ void main() {
     await tester.tap(find.text('创建账号'));
     await tester.pump();
 
-    expect(find.text('请输入正确的手机�?), findsOneWidget);
+    expect(find.text('请输入正确的手机号'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -297,7 +297,7 @@ void main() {
       expect(repository.lastCountryCode, '+86');
       expect(repository.lastPhoneNumber, '13800138000');
       expect(repository.lastChallengeId, 'challenge-1');
-      expect(find.text('验证码已发送，请注意查�?), findsOneWidget);
+      expect(find.text('验证码已发送，请注意查收'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('register_send_code_countdown')),
         findsOneWidget,
@@ -502,7 +502,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.textContaining('验证码错�?), findsOneWidget);
+    expect(find.textContaining('验证码错误'), findsOneWidget);
     expect(find.byType(RegisterPage), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

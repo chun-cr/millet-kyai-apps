@@ -42,9 +42,8 @@ class _Tab1Overview extends StatelessWidget {
       _buildScanMeta(context),
     ]);
 
-    return ListView(
+    return AppResponsiveListView(
       physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       children: children,
     );
   }

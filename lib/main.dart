@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:millet_kyai_apps/l10n/app_localizations.dart';
 
+import 'core/layout/app_layout.dart';
 import 'core/l10n/l10n.dart';
 import 'core/l10n/locale_controller.dart';
 import 'core/di/injector.dart';
@@ -23,12 +24,6 @@ void main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-
-  // 锁定竖屏
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
 
   await AppIdentity.initialize();
   initInjector();
@@ -50,6 +45,8 @@ class MyApp extends ConsumerWidget {
       onGenerateTitle: (context) => context.l10n.appTitle,
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
+      builder: (context, child) =>
+          AppOrientationGate(child: child ?? const SizedBox.shrink()),
       locale: locale,
       supportedLocales: supportedAppLocales,
       localizationsDelegates: const [

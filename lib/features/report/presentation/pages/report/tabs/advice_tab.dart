@@ -4,11 +4,13 @@ class _Tab4Advice extends StatefulWidget {
   final bool isUnlocked;
   final Future<void> Function() onUnlock;
   final ReportViewData viewData;
+  final bool shouldLoadRecommendations;
 
   const _Tab4Advice({
     required this.isUnlocked,
     required this.onUnlock,
     required this.viewData,
+    required this.shouldLoadRecommendations,
   });
 
   @override
@@ -16,8 +18,8 @@ class _Tab4Advice extends StatefulWidget {
 }
 
 class _Tab4AdviceState extends State<_Tab4Advice> {
-  late Future<List<ReportProjectData>> _backendProjectsFuture;
-  late Future<List<ReportProductData>> _backendProductsFuture;
+  Future<List<ReportProjectData>>? _backendProjectsFuture;
+  Future<List<ReportProductData>>? _backendProductsFuture;
 
   bool get _isUnlocked => widget.isUnlocked;
   Future<void> Function() get _onUnlock => widget.onUnlock;
@@ -26,13 +28,24 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
   @override
   void initState() {
     super.initState();
-    _backendProjectsFuture = _loadBackendProjects();
-    _backendProductsFuture = _loadBackendProducts();
+    if (widget.shouldLoadRecommendations) {
+      _startRecommendationLoads();
+    }
   }
 
   @override
   void didUpdateWidget(covariant _Tab4Advice oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!oldWidget.shouldLoadRecommendations &&
+        widget.shouldLoadRecommendations) {
+      setState(_startRecommendationLoads);
+      return;
+    }
+
+    if (!widget.shouldLoadRecommendations) {
+      return;
+    }
+
     final shouldReloadProjects =
         _projectQuerySignature(oldWidget.viewData) !=
         _projectQuerySignature(widget.viewData);
@@ -44,21 +57,30 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
     }
 
     setState(() {
-      if (shouldReloadProjects) {
-        _backendProjectsFuture = _loadBackendProjects();
-      }
-      if (shouldReloadProducts) {
-        _backendProductsFuture = _loadBackendProducts();
-      }
+      _startRecommendationLoads(
+        loadProjects: shouldReloadProjects,
+        loadProducts: shouldReloadProducts,
+      );
     });
+  }
+
+  void _startRecommendationLoads({
+    bool loadProjects = true,
+    bool loadProducts = true,
+  }) {
+    if (loadProjects) {
+      _backendProjectsFuture = _loadBackendProjects();
+    }
+    if (loadProducts) {
+      _backendProductsFuture = _loadBackendProducts();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return ListView(
+    return AppResponsiveListView(
       physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       children: [
         _FloatingSectionTitle(title: l10n.reportAdviceDietTitle),
         const SizedBox(height: 10),
@@ -615,81 +637,16 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
   }
 
   Widget _buildReportEnhancementPanel(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _FloatingSectionTitle(
-          title: '报告增强',
-          accentColor: Color(0xFF4A7FA8),
-        ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          borderColor: const Color(0xFF4A7FA8).withValues(alpha: 0.12),
-          shadowColor: const Color(0xFF4A7FA8).withValues(alpha: 0.05),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '这些能力已接入后端接口，可在当前报告上下文中直接查看或保存。',
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.55,
-                  color: const Color(0xFF3A3028).withValues(alpha: 0.62),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _ReportActionTile(
-                icon: Icons.edit_note_rounded,
-                title: '保存用户自述',
-                subtitle: '写入 self/description，补全报告编辑入口。',
-                color: const Color(0xFF4A7FA8),
-                enabled: !_reportActionLoading,
-                onTap: _handleSaveSelfDescription,
-              ),
-              _ReportActionTile(
-                icon: Icons.spa_outlined,
-                title: '读取调理方案',
-                subtitle: '按体质、年龄、性别动态加载 therapy 接口。',
-                color: const Color(0xFF2D6A4F),
-                enabled: !_reportActionLoading,
-                onTap: _handleLoadTherapies,
-              ),
-              _ReportActionTile(
-                icon: Icons.lock_open_rounded,
-                title: '刷新锁定状态',
-                subtitle: '调用 locked-status，确认服务端权益状态。',
-                color: const Color(0xFFC9A84C),
-                enabled: !_reportActionLoading,
-                onTap: _handleLoadLockedStatus,
-              ),
-              _ReportActionTile(
-                icon: Icons.history_rounded,
-                title: '历史版本',
-                subtitle: '查询当前 Survey report 历史版本。',
-                color: const Color(0xFF6B5B95),
-                enabled: !_reportActionLoading,
-                onTap: _handleLoadSurveyHistory,
-              ),
-              _ReportActionTile(
-                icon: Icons.chat_bubble_outline_rounded,
-                title: 'AI 问答结论',
-                subtitle: '读取 chat-result 并展示返回摘要。',
-                color: const Color(0xFF0D7A5A),
-                enabled: !_reportActionLoading,
-                onTap: _handleLoadChatResult,
-              ),
-              _ReportActionTile(
-                icon: Icons.file_download_outlined,
-                title: '生成下载令牌',
-                subtitle: '创建下载/分享 token，便于后续落地页使用。',
-                color: const Color(0xFFD4794A),
-                enabled: !_reportActionLoading,
-                onTap: _handleCreateDownloadToken,
-              ),
-            ],
-          ),
-        ),
-      ],
+    return _ReportEnhancementSection(
+      isLoading: _reportActionLoading,
+      reportId: _viewData.reportId,
+      primaryConstitution: _viewData.primaryConstitution,
+      isLive: _viewData.isLive,
+      onSaveSelfDescription: _handleSaveSelfDescription,
+      onLoadLockedStatus: _handleLoadLockedStatus,
+      onLoadSurveyHistory: _handleLoadSurveyHistory,
+      onLoadChatResult: _handleLoadChatResult,
+      onCreateDownloadToken: _handleCreateDownloadToken,
     );
   }
 
@@ -723,9 +680,14 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
       return;
     }
 
-    final text = await _showTextInputDialog(
+    final text = await _showLongTextEditorSheet(
+      context,
       title: '用户自述',
+      subtitle: '记录用户主动补充的症状、生活习惯或本次咨询重点。',
       hintText: '例如：最近睡眠偏浅、饭后胃胀，想重点调理脾胃。',
+      actionLabel: '保存自述',
+      icon: Icons.edit_note_rounded,
+      color: const Color(0xFF4A7FA8),
     );
     if (text == null) {
       return;
@@ -739,27 +701,6 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
         return;
       }
       showAppToast(context, '自述已保存。', kind: AppToastKind.success);
-    });
-  }
-
-  Future<void> _handleLoadTherapies() async {
-    await _runReportAction(() async {
-      final therapies = await ReportRemoteSource(getIt<DioClient>())
-          .getPhysiqueTherapies(
-            token: _viewData.token,
-            age: _viewData.age,
-            sex: _viewData.sex,
-            physiqueIds: _collectNumericIds(
-              _viewData.constitutionScores.map((item) => item.id),
-            ),
-          );
-      if (!mounted) {
-        return;
-      }
-      await _showPayloadDialog(
-        title: '调理方案',
-        payload: {'therapies': therapies},
-      );
     });
   }
 
@@ -777,7 +718,7 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
       if (!mounted) {
         return;
       }
-      await _showPayloadDialog(title: '锁定状态', payload: payload);
+      await _showLockedStatusSheet(context, payload: payload);
     });
   }
 
@@ -795,22 +736,7 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
       if (!mounted) {
         return;
       }
-      await _showPayloadDialog(
-        title: '历史版本',
-        payload: {
-          'items': history
-              .map(
-                (item) => {
-                  'id': item.id,
-                  'testTime': item.testTime,
-                  'healthScore': item.healthScore,
-                  'physiqueName': item.physiqueName,
-                  'lockedStatus': item.lockedStatus,
-                },
-              )
-              .toList(growable: false),
-        },
-      );
+      await _showSurveyHistorySheet(context, history: history);
     });
   }
 
@@ -828,7 +754,7 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
       if (!mounted) {
         return;
       }
-      await _showPayloadDialog(title: 'AI 问答结论', payload: payload);
+      await _showChatResultSheet(context, payload: payload);
     });
   }
 
@@ -846,106 +772,8 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
       if (!mounted) {
         return;
       }
-      await _showPayloadDialog(title: '下载令牌', payload: payload);
+      await _showDownloadTokenSheet(context, payload: payload);
     });
-  }
-
-  Future<String?> _showTextInputDialog({
-    required String title,
-    required String hintText,
-  }) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            maxLines: 4,
-            decoration: InputDecoration(hintText: hintText),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: const Text('保存'),
-            ),
-          ],
-        );
-      },
-    );
-    controller.dispose();
-    if (result == null || result.trim().isEmpty) {
-      return null;
-    }
-    return result.trim();
-  }
-
-  Future<void> _showPayloadDialog({
-    required String title,
-    required Object payload,
-  }) async {
-    const encoder = JsonEncoder.withIndent('  ');
-    final text = encoder.convert(payload);
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 24,
-          ),
-          backgroundColor: const Color(0xFFF8F5EF),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 680),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1E1810),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: SelectableText(
-                      text,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 1.45,
-                        color: Color(0xFF3A3028),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   Future<List<ReportProjectData>> _loadBackendProjects() async {
@@ -981,6 +809,10 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
   }
 
   Future<List<ReportProductData>> _loadBackendProducts() async {
+    if (!_viewData.isLive) {
+      return const <ReportProductData>[];
+    }
+
     try {
       final source = ReportRemoteSource(getIt<DioClient>());
       final rawProducts = await source.getPhysiqueProducts(
@@ -1044,100 +876,5 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
       resolved.add(parsed);
     }
     return resolved;
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  Shared Sub-widgets
-// ══════════════════════════════════════════════════════════════════
-
-/// 卡片容器
-class _ReportActionTile extends StatelessWidget {
-  const _ReportActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: enabled ? onTap : null,
-          borderRadius: BorderRadius.circular(16),
-          child: Ink(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: enabled ? 0.055 : 0.025),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withValues(alpha: 0.1)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: color.withValues(alpha: enabled ? 0.92 : 0.35),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E1810),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 11,
-                          height: 1.45,
-                          color: const Color(
-                            0xFF3A3028,
-                          ).withValues(alpha: 0.58),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: color.withValues(alpha: enabled ? 0.72 : 0.26),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

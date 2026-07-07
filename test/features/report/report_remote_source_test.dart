@@ -113,7 +113,7 @@ void main() {
         'code': 0,
         'message': 'ok',
         'data': {
-          'product': {'id': 123, 'name': '艾灸温养�?, 'description': '详情接口返回的商品说�?},
+          'product': {'id': 123, 'name': '艾灸温养包', 'description': '详情接口返回的商品说明'},
         },
       });
     });
@@ -129,8 +129,8 @@ void main() {
     expect(adapter.lastRequestOptions.method, 'GET');
     expect(result, isNotNull);
     expect(result!['id'], 123);
-    expect(result['name'], '艾灸温养�?);
-    expect(result['description'], '详情接口返回的商品说�?);
+    expect(result['name'], '艾灸温养包');
+    expect(result['description'], '详情接口返回的商品说明');
   });
 
   test(
@@ -286,7 +286,7 @@ void main() {
       final dioClient = DioClient();
       final adapter = _CaptureAdapter((options) {
         requestPaths.add(options.path);
-        if (options.path == '/api/v1/saas/physiques/reports') {
+        if (options.path == '/api/v1/saas/mobile/physique/report') {
           return _jsonResponse({
             'code': 0,
             'message': 'ok',
@@ -329,7 +329,7 @@ void main() {
       expect(
         requestPaths,
         equals([
-          '/api/v1/saas/physiques/reports',
+          '/api/v1/saas/mobile/physique/report',
           '/api/v1/saas/mobile/ai/diagnosis/report/report-1',
         ]),
       );
@@ -343,7 +343,7 @@ void main() {
       final dioClient = DioClient();
       final adapter = _CaptureAdapter((options) {
         requestPaths.add(options.path);
-        if (options.path == '/api/v1/saas/physiques/reports') {
+        if (options.path == '/api/v1/saas/mobile/physique/report') {
           return _jsonResponse({
             'code': 0,
             'message': 'ok',
@@ -373,7 +373,7 @@ void main() {
 
       expect(result, hasLength(1));
       expect(result.first.faceImageUrl, isEmpty);
-      expect(requestPaths, equals(['/api/v1/saas/physiques/reports']));
+      expect(requestPaths, equals(['/api/v1/saas/mobile/physique/report']));
     },
   );
 }

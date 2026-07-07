@@ -812,6 +812,7 @@
   "scanTipBrightLight": "밝고 고른 조명에서 진행해 주세요",
   "scanTipKeepSteady": "스캔 중에는 자세를 안정적으로 유지해 주세요",
   "scanScanning": "스캔 중",
+  "scanUploading": "업로드 중",
   "scanFaceAlignInFrame": "얼굴을 프레임 안에 맞춰 주세요",
   "scanFaceDetectedReady": "얼굴을 인식했습니다 ✓",
   "scanFaceTitle": "얼굴 스캔",

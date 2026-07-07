@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/layout/app_layout.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/router/app_router.dart';
 
@@ -63,22 +64,7 @@ class _ScanGuidePageState extends State<ScanGuidePage>
                 child: Column(
                   children: [
                     _buildHeader(context),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 4),
-                            _buildTitleSection(),
-                            const SizedBox(height: 28),
-                            _buildStepCards(),
-                            const SizedBox(height: 24),
-                            _buildInfoBanner(),
-                            const SizedBox(height: 32),
-                          ],
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _buildGuideContent()),
                     _buildBottomSection(context),
                   ],
                 ),
@@ -87,6 +73,56 @@ class _ScanGuidePageState extends State<ScanGuidePage>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildGuideContent() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = AppLayoutMetrics.of(context);
+        final sidePadding = layout.centeredHorizontalInset(
+          constraints.maxWidth,
+          maxContentWidth: layout.scanGuideContentMaxWidth,
+          minHorizontalPadding: 20,
+        );
+        final useLandscapeColumns =
+            layout.isTabletLandscape && constraints.maxWidth >= 860;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 32),
+          child: useLandscapeColumns
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 24),
+                        child: Column(
+                          children: [
+                            _buildTitleSection(),
+                            const SizedBox(height: 28),
+                            _buildInfoBanner(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 32),
+                    Expanded(flex: 6, child: _buildStepCards()),
+                  ],
+                )
+              : Column(
+                  children: [
+                    const SizedBox(height: 4),
+                    _buildTitleSection(),
+                    const SizedBox(height: 28),
+                    _buildStepCards(),
+                    const SizedBox(height: 24),
+                    _buildInfoBanner(),
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -105,8 +141,11 @@ class _ScanGuidePageState extends State<ScanGuidePage>
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                size: 18, color: Color(0xFF3A3028)),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 18,
+              color: Color(0xFF3A3028),
+            ),
             onPressed: () => context.pop(),
           ),
           Expanded(
@@ -284,10 +323,7 @@ class _ScanGuidePageState extends State<ScanGuidePage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: data.color.withValues(alpha: 0.12),
-          width: 1,
-        ),
+        border: Border.all(color: data.color.withValues(alpha: 0.12), width: 1),
         boxShadow: [
           BoxShadow(
             color: data.color.withValues(alpha: 0.07),
@@ -360,7 +396,10 @@ class _ScanGuidePageState extends State<ScanGuidePage>
                         children: [
                           Expanded(
                             child: Text(
-                              context.l10n.scanGuideStepLabel(data.step, data.title),
+                              context.l10n.scanGuideStepLabel(
+                                data.step,
+                                data.title,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -375,7 +414,9 @@ class _ScanGuidePageState extends State<ScanGuidePage>
                           // TCM label tag
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: data.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -422,13 +463,16 @@ class _ScanGuidePageState extends State<ScanGuidePage>
             decoration: BoxDecoration(
               color: data.lightColor.withValues(alpha: 0.6),
               borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(18)),
+                bottom: Radius.circular(18),
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.auto_awesome,
-                    size: 12,
-                    color: data.color.withValues(alpha: 0.6)),
+                Icon(
+                  Icons.auto_awesome,
+                  size: 12,
+                  color: data.color.withValues(alpha: 0.6),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -454,9 +498,7 @@ class _ScanGuidePageState extends State<ScanGuidePage>
       padding: const EdgeInsets.only(left: 45, top: 0),
       child: SizedBox(
         height: 22,
-        child: CustomPaint(
-          painter: _DashedLinePainter(color: color),
-        ),
+        child: CustomPaint(painter: _DashedLinePainter(color: color)),
       ),
     );
   }
@@ -484,8 +526,11 @@ class _ScanGuidePageState extends State<ScanGuidePage>
               color: const Color(0xFF2D6A4F).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.eco_outlined,
-                size: 18, color: Color(0xFF2D6A4F)),
+            child: const Icon(
+              Icons.eco_outlined,
+              size: 18,
+              color: Color(0xFF2D6A4F),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -522,91 +567,120 @@ class _ScanGuidePageState extends State<ScanGuidePage>
 
   Widget _buildBottomSection(BuildContext context) {
     final l10n = context.l10n;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F1EB),
-        border: Border(
-          top: BorderSide(
-            color: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
-            width: 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = AppLayoutMetrics.of(context);
+        final sidePadding = layout.centeredHorizontalInset(
+          constraints.maxWidth,
+          maxContentWidth: layout.scanGuideBottomMaxWidth,
+          minHorizontalPadding: 20,
+        );
+
+        return Container(
+          padding: EdgeInsets.fromLTRB(sidePadding, 12, sidePadding, 24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F1EB),
+            border: Border(
+              top: BorderSide(
+                color: const Color(0xFF2D6A4F).withValues(alpha: 0.08),
+                width: 1,
+              ),
+            ),
           ),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Time estimate
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.timer_outlined,
-                  size: 13,
-                  color: const Color(0xFF3A3028).withValues(alpha: 0.4)),
-              const SizedBox(width: 5),
-              Text(
-                l10n.scanGuideEstimate,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: const Color(0xFF3A3028).withValues(alpha: 0.4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // CTA Button
-          GestureDetector(
-            onTap: () => context.push(AppRoutes.scanFace),
-            child: Container(
-              width: double.infinity,
-              height: 54,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1D5E40), Color(0xFF2D8A5E), Color(0xFF3DAB78)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2D6A4F).withValues(alpha: 0.38),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
+              // Time estimate
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.play_circle_outline,
-                      color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.scanGuideStartButton,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2,
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 13,
+                    color: const Color(0xFF3A3028).withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      l10n.scanGuideEstimate,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: const Color(0xFF3A3028).withValues(alpha: 0.4),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+              // CTA Button
+              GestureDetector(
+                onTap: () => context.push(AppRoutes.scanFace),
+                child: Container(
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF1D5E40),
+                        Color(0xFF2D8A5E),
+                        Color(0xFF3DAB78),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2D6A4F).withValues(alpha: 0.38),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.play_circle_outline,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          l10n.scanGuideStartButton,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l10n.scanGuidePrivacyNote,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: const Color(0xFF3A3028).withValues(alpha: 0.35),
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            l10n.scanGuidePrivacyNote,
-            style: TextStyle(
-              fontSize: 11,
-              color: const Color(0xFF3A3028).withValues(alpha: 0.35),
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

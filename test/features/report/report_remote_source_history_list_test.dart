@@ -51,6 +51,58 @@ void main() {
   });
 
   test(
+    'getReportsPage returns one page without draining later pages',
+    () async {
+      final adapter = _HistoryListAdapter((options) {
+        expect(options.path, '/api/v1/saas/mobile/physique/report');
+        expect(options.queryParameters['source'], 'KY_MA');
+        expect(options.queryParameters['topOrgId'], 100);
+        expect(options.queryParameters['pageNo'], 2);
+        expect(options.queryParameters['pageSize'], 2);
+        return _jsonResponse({
+          'code': 0,
+          'message': 'ok',
+          'data': {
+            'records': [
+              {
+                'id': 'report-3',
+                'testTime': '2026-04-17 10:30',
+                'healthScore': 82,
+                'physiqueName': 'Balanced',
+                'lockedStatus': '1',
+              },
+              {
+                'id': 'report-4',
+                'testTime': '2026-04-18 10:30',
+                'healthScore': 78,
+                'physiqueName': 'Qi deficiency',
+                'lockedStatus': '0',
+              },
+            ],
+            'totalCount': 5,
+          },
+        });
+      });
+
+      final remoteSource = _remoteSource(adapter);
+
+      final page = await remoteSource.getReportsPage(
+        source: 'KY_MA',
+        topOrgId: 100,
+        pageNo: 2,
+        pageSize: 2,
+      );
+
+      expect(page.items.map((item) => item.id), ['report-3', 'report-4']);
+      expect(page.pageNo, 2);
+      expect(page.pageSize, 2);
+      expect(page.totalCount, 5);
+      expect(page.hasMore, isTrue);
+      expect(adapter.paths, ['/api/v1/saas/mobile/physique/report']);
+    },
+  );
+
+  test(
     'getAllReports falls back to the legacy list after mobile 400',
     () async {
       final adapter = _HistoryListAdapter((options) {

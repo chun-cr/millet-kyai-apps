@@ -350,6 +350,10 @@ class FaceScanChannel(private val context: Context) : MethodChannel.MethodCallHa
             "imageWidth" to ((data["imageWidth"] as? Number)?.toDouble() ?: 0.0),
             "imageHeight" to ((data["imageHeight"] as? Number)?.toDouble() ?: 0.0),
             "mouthCenter" to data["mouthCenter"],
+            "generationId" to data["generationId"],
+            "timestampMs" to data["timestampMs"],
+            "isBackCamera" to data["isBackCamera"],
+            "mirrored" to data["mirrored"],
         )
 
         (context as? MainActivity)?.runOnUiThread {
@@ -366,6 +370,10 @@ class FaceScanChannel(private val context: Context) : MethodChannel.MethodCallHa
             "imageWidth" to 0,
             "imageHeight" to 0,
             "mouthCenter" to null,
+            "generationId" to null,
+            "timestampMs" to null,
+            "isBackCamera" to null,
+            "mirrored" to null,
         )
     }
 

@@ -136,7 +136,7 @@ void main() {
                 'title': '最近睡眠怎么样？',
                 'options': <Map<String, String>>[
                   <String, String>{'optionValue': 'good', 'optionName': '挺好'},
-                  <String, String>{'optionValue': 'normal', 'optionName': '一�?},
+                  <String, String>{'optionValue': 'normal', 'optionName': '一般'},
                 ],
                 'currentIndex': 1,
                 'totalCount': 1,

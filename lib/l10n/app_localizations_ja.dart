@@ -1081,6 +1081,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get scanScanning => 'スキャン中';
 
   @override
+  String get scanUploading => 'アップロード中';
+
+  @override
   String get scanFaceAlignInFrame => '顔をフレーム内に合わせてください';
 
   @override

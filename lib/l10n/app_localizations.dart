@@ -2172,6 +2172,12 @@ abstract class AppLocalizations {
   /// **'扫描中…'**
   String get scanScanning;
 
+  /// No description provided for @scanUploading.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传中…'**
+  String get scanUploading;
+
   /// No description provided for @scanFaceAlignInFrame.
   ///
   /// In zh, this message translates to:

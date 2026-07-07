@@ -6,8 +6,10 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:millet_kyai_apps/core/di/injector.dart';
+import 'package:millet_kyai_apps/core/layout/app_layout.dart';
 import 'package:millet_kyai_apps/core/l10n/l10n.dart';
 import 'package:millet_kyai_apps/core/l10n/seasonal_context.dart';
 import 'package:millet_kyai_apps/core/network/dio_client.dart';
@@ -26,12 +28,24 @@ export 'report_view_data.dart';
 export 'package:millet_kyai_apps/features/report/data/models/report_detail.dart';
 
 part 'report_screen.dart';
-part 'report_widgets.dart';
+part 'screen/report_hero_layout.dart';
+part 'screen/report_hero_widgets.dart';
+part 'screen/report_hero_helpers.dart';
+part 'screen/report_share_dialog.dart';
+part 'widgets/report_shared_widgets.dart';
+part 'widgets/report_health_radar_widgets.dart';
+part 'widgets/report_risk_widgets.dart';
+part 'widgets/report_unlock_widgets.dart';
+part 'widgets/report_recommendation_widgets.dart';
 part 'report_painters.dart';
 part 'tabs/overview_tab.dart';
 part 'tabs/constitution_tab.dart';
+part 'tabs/therapy_acupoints.dart';
 part 'tabs/therapy_tab.dart';
 part 'tabs/advice_tab.dart';
+part 'tabs/report_enhancement_section.dart';
+part 'tabs/report_enhancement_sheets.dart';
+part 'tabs/report_enhancement_visuals.dart';
 
 typedef ReportAddSymptomAction =
     Future<void> Function({

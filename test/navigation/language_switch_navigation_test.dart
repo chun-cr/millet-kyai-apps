@@ -41,7 +41,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Choose Language'), findsOneWidget);
-    await tester.tap(find.text('日本�?));
+    await tester.tap(find.text('日本語'));
     await tester.pumpAndSettle();
 
     expect(find.text('プロフィール'), findsWidgets);

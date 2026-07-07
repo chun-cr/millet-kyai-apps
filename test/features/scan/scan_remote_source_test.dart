@@ -195,6 +195,11 @@ void main() {
       expect(headers['Authorization'], 'Bearer access-token');
       expect(headers['X-App-Id'], AppIdentity.fallbackAppId);
       expect(headers.containsKey('X-Platform'), isFalse);
+      expect(adapter.requests.single.sendTimeout, const Duration(seconds: 30));
+      expect(
+        adapter.requests.single.receiveTimeout,
+        const Duration(seconds: 120),
+      );
     },
   );
 

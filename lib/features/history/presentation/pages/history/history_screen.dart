@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:millet_kyai_apps/core/layout/app_layout.dart';
 import 'package:millet_kyai_apps/core/l10n/l10n.dart';
 import 'package:millet_kyai_apps/features/history/presentation/pages/history/history_record.dart';
 import 'package:millet_kyai_apps/features/history/presentation/pages/history/history_risk_trend_chart.dart';
@@ -11,15 +12,25 @@ import 'package:millet_kyai_apps/features/history/presentation/pages/history/his
 import 'package:millet_kyai_apps/features/history/presentation/pages/history/history_widgets.dart';
 
 class HistoryReportScreen extends StatefulWidget {
-  const HistoryReportScreen({super.key, required this.records});
+  const HistoryReportScreen({
+    super.key,
+    required this.records,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    this.onLoadMore,
+  });
 
   final List<DiagnosisRecord> records;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final VoidCallback? onLoadMore;
 
   @override
   State<HistoryReportScreen> createState() => _HistoryReportScreenState();
 }
 
 class _HistoryReportScreenState extends State<HistoryReportScreen> {
+  final ScrollController _scrollController = ScrollController();
   List<DiagnosisRecord> _records = const <DiagnosisRecord>[];
   Set<int> _xAxisLabelIndexes = const <int>{};
   int? _trendTouchedIndex;
@@ -27,6 +38,7 @@ class _HistoryReportScreenState extends State<HistoryReportScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_handleScroll);
     _applyRecords(widget.records);
   }
 
@@ -35,6 +47,24 @@ class _HistoryReportScreenState extends State<HistoryReportScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.records != widget.records) {
       _applyRecords(widget.records);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients ||
+        widget.isLoadingMore ||
+        !widget.hasMore) {
+      return;
+    }
+    if (_scrollController.position.extentAfter < 600) {
+      widget.onLoadMore?.call();
     }
   }
 
@@ -79,43 +109,117 @@ class _HistoryReportScreenState extends State<HistoryReportScreen> {
   Widget _buildBody(BuildContext context) {
     final visibleRecords = _records.reversed.toList(growable: false);
 
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate(<Widget>[
-              _buildTrendChart(context),
-              const SizedBox(height: 24),
-              _buildRiskChart(context),
-              const SizedBox(height: 24),
-              HistorySectionTitle(title: context.l10n.historyPastReports),
-              const SizedBox(height: 12),
-              if (_records.isEmpty) _buildEmptyState(context),
-            ]),
-          ),
-        ),
-        if (visibleRecords.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                mainAxisExtent: 278,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = AppLayoutMetrics.of(context);
+        final horizontalInset = layout.centeredHorizontalInset(
+          constraints.maxWidth,
+        );
+        final contentWidth = math.max(
+          0,
+          constraints.maxWidth - horizontalInset * 2,
+        );
+        final wideCharts = contentWidth >= 840;
+        final reportCrossAxisCount = contentWidth >= 860 ? 3 : 2;
+        final reportCardExtent = contentWidth >= 860 ? 292.0 : 278.0;
+
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalInset,
+                8,
+                horizontalInset,
+                32,
               ),
-              delegate: SliverChildBuilderDelegate(
-                    (context, index) => HistoryRecordCard(
-                  record: visibleRecords[index],
-                ),
-                childCount: visibleRecords.length,
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(<Widget>[
+                  if (wideCharts)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _buildTrendChart(context)),
+                        const SizedBox(width: 18),
+                        Expanded(child: _buildRiskChart(context)),
+                      ],
+                    )
+                  else ...[
+                    _buildTrendChart(context),
+                    const SizedBox(height: 24),
+                    _buildRiskChart(context),
+                  ],
+                  const SizedBox(height: 24),
+                  HistorySectionTitle(title: context.l10n.historyPastReports),
+                  const SizedBox(height: 12),
+                  if (_records.isEmpty) _buildEmptyState(context),
+                ]),
               ),
             ),
-          ),
-      ],
+            if (visibleRecords.isNotEmpty)
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  0,
+                  horizontalInset,
+                  32,
+                ),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: reportCrossAxisCount,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    mainAxisExtent: reportCardExtent,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) =>
+                        HistoryRecordCard(record: visibleRecords[index]),
+                    childCount: visibleRecords.length,
+                  ),
+                ),
+              ),
+            if (widget.hasMore || widget.isLoadingMore)
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  0,
+                  horizontalInset,
+                  36,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _buildLoadMoreFooter(context),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
+
+  Widget _buildLoadMoreFooter(BuildContext context) {
+    if (widget.isLoadingMore) {
+      return const SizedBox(
+        key: ValueKey('history_load_more_indicator'),
+        height: 48,
+        child: Center(
+          child: SizedBox.square(
+            dimension: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: TextButton.icon(
+        key: const ValueKey('history_load_more_button'),
+        onPressed: widget.onLoadMore,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+        label: Text(context.l10n.profilePointsLoadMore),
+      ),
+    );
+  }
+
   Widget _buildEmptyState(BuildContext context) {
     final message = Localizations.localeOf(context).languageCode == 'zh'
         ? '暂无历史报告'
@@ -221,7 +325,7 @@ class _HistoryReportScreenState extends State<HistoryReportScreen> {
                 dotData: FlDotData(
                   show: true,
                   checkToShowDot: (spot, barData) =>
-                  spot.x.toInt() == _records.length - 1,
+                      spot.x.toInt() == _records.length - 1,
                   getDotPainter: (spot, percent, barData, index) =>
                       FlDotCirclePainter(
                         radius: 3.5,
@@ -374,23 +478,23 @@ class _HistoryReportScreenState extends State<HistoryReportScreen> {
         return spotIndexes
             .map(
               (_) => TouchedSpotIndicatorData(
-            FlLine(
-              color: color.withValues(alpha: 0.18),
-              strokeWidth: 1,
-              dashArray: [3, 4],
-            ),
-            FlDotData(
-              show: true,
-              getDotPainter: (spot, percent, bar, index) =>
-                  FlDotCirclePainter(
-                    radius: 4.6,
-                    color: color,
-                    strokeWidth: 2.4,
-                    strokeColor: Colors.white,
-                  ),
-            ),
-          ),
-        )
+                FlLine(
+                  color: color.withValues(alpha: 0.18),
+                  strokeWidth: 1,
+                  dashArray: [3, 4],
+                ),
+                FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, bar, index) =>
+                      FlDotCirclePainter(
+                        radius: 4.6,
+                        color: color,
+                        strokeWidth: 2.4,
+                        strokeColor: Colors.white,
+                      ),
+                ),
+              ),
+            )
             .toList(growable: false);
       },
       touchTooltipData: LineTouchTooltipData(
@@ -411,22 +515,22 @@ class _HistoryReportScreenState extends State<HistoryReportScreen> {
             .asMap()
             .entries
             .map((entry) {
-          final item = entry.value;
-          final itemDate = _dateLabel(_records[item.x.toInt()].date);
-          final itemColor = _lineColorOf(item.bar);
-          final itemValueText = valueFormatter(item.y);
-          final itemLineName = lineNameResolver(item);
-          final itemTitle = entry.key == 0 ? '$itemDate\n' : '';
-          return LineTooltipItem(
-            '$itemTitle$itemLineName  $itemValueText',
-            TextStyle(
-              color: itemColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              height: 1.45,
-            ),
-          );
-        })
+              final item = entry.value;
+              final itemDate = _dateLabel(_records[item.x.toInt()].date);
+              final itemColor = _lineColorOf(item.bar);
+              final itemValueText = valueFormatter(item.y);
+              final itemLineName = lineNameResolver(item);
+              final itemTitle = entry.key == 0 ? '$itemDate\n' : '';
+              return LineTooltipItem(
+                '$itemTitle$itemLineName  $itemValueText',
+                TextStyle(
+                  color: itemColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.45,
+                ),
+              );
+            })
             .toList(growable: false),
       ),
       distanceCalculator: (offset, spotOffset) {
@@ -438,8 +542,8 @@ class _HistoryReportScreenState extends State<HistoryReportScreen> {
   }
 
   List<ShowingTooltipIndicators> _buildTrendTooltipIndicators(
-      List<FlSpot> trendSpots,
-      ) {
+    List<FlSpot> trendSpots,
+  ) {
     final index = _trendTouchedIndex;
     if (index == null || index < 0 || index >= trendSpots.length) {
       return const <ShowingTooltipIndicators>[];

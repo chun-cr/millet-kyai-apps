@@ -1,10 +1,49 @@
 part of '../report_page.dart';
 
-class _Tab3Therapy extends StatelessWidget {
+class _Tab3Therapy extends StatefulWidget {
+  final ReportViewData viewData;
   final bool isUnlocked;
   final Future<void> Function() onUnlock;
 
-  const _Tab3Therapy({required this.isUnlocked, required this.onUnlock});
+  const _Tab3Therapy({
+    required this.viewData,
+    required this.isUnlocked,
+    required this.onUnlock,
+  });
+
+  @override
+  State<_Tab3Therapy> createState() => _Tab3TherapyState();
+}
+
+class _Tab3TherapyState extends State<_Tab3Therapy> {
+  Future<List<Map<String, dynamic>>>? _therapyFuture;
+  String? _therapySignature;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTherapyFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _Tab3Therapy oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncTherapyFuture();
+  }
+
+  void _syncTherapyFuture() {
+    final signature = _therapyQuerySignature(widget.viewData);
+    if (!widget.isUnlocked || signature == null) {
+      _therapyFuture = null;
+      _therapySignature = null;
+      return;
+    }
+    if (_therapySignature == signature) {
+      return;
+    }
+    _therapySignature = signature;
+    _therapyFuture = _loadTherapiesForDominantConstitution(widget.viewData);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,25 +54,24 @@ class _Tab3Therapy extends StatelessWidget {
       l10n.solarTermLabel(seasonalContext.solarTerm),
     );
 
-    return ListView(
+    return AppResponsiveListView(
       physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       children: [
         _FloatingSectionTitle(title: l10n.reportTherapyAcupointsTitle),
         const SizedBox(height: 10),
         _Lockable(
-          isUnlocked: isUnlocked,
+          isUnlocked: widget.isUnlocked,
           lockTitle: l10n.reportUnlockAcupuncturePointsTitle,
-          onUnlock: onUnlock,
+          onUnlock: widget.onUnlock,
           child: _buildAcupuncturePointsContent(context),
         ),
         const SizedBox(height: 20),
         _FloatingSectionTitle(title: l10n.reportMentalWellnessTitle),
         const SizedBox(height: 10),
         _Lockable(
-          isUnlocked: isUnlocked,
+          isUnlocked: widget.isUnlocked,
           lockTitle: l10n.reportUnlockMentalWellnessTitle,
-          onUnlock: onUnlock,
+          onUnlock: widget.onUnlock,
           child: _buildMentalWellnessContent(context),
         ),
         const SizedBox(height: 20),
@@ -46,9 +84,9 @@ class _Tab3Therapy extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         _Lockable(
-          isUnlocked: isUnlocked,
+          isUnlocked: widget.isUnlocked,
           lockTitle: l10n.reportUnlockSeasonalCareTitle,
-          onUnlock: onUnlock,
+          onUnlock: widget.onUnlock,
           child: _buildSeasonalCareContent(context),
         ),
       ],
@@ -57,52 +95,77 @@ class _Tab3Therapy extends StatelessWidget {
 
   // ── 辩证取穴 ─────────────────────────────────────────────────────
   Widget _buildAcupuncturePointsContent(BuildContext context) {
-    final l10n = context.l10n;
-    final points = [
-      _AcuPoint(
-        name: l10n.reportTherapyAcuPointZusanli,
-        location: l10n.reportTherapyAcuPointZusanliLocation,
-        effect: l10n.reportTherapyAcuPointZusanliEffect,
-        meridian: l10n.reportTherapyAcuPointZusanliMeridian,
-        color: Color(0xFF2D6A4F),
-      ),
-      _AcuPoint(
-        name: l10n.reportTherapyAcuPointPishu,
-        location: l10n.reportTherapyAcuPointPishuLocation,
-        effect: l10n.reportTherapyAcuPointPishuEffect,
-        meridian: l10n.reportTherapyAcuPointPishuMeridian,
-        color: Color(0xFF0D7A5A),
-      ),
-      _AcuPoint(
-        name: l10n.reportTherapyAcuPointQihai,
-        location: l10n.reportTherapyAcuPointQihaiLocation,
-        effect: l10n.reportTherapyAcuPointQihaiEffect,
-        meridian: l10n.reportTherapyAcuPointQihaiMeridian,
-        color: Color(0xFF6B5B95),
-      ),
-      _AcuPoint(
-        name: l10n.reportTherapyAcuPointGuanyuan,
-        location: l10n.reportTherapyAcuPointGuanyuanLocation,
-        effect: l10n.reportTherapyAcuPointGuanyuanEffect,
-        meridian: l10n.reportTherapyAcuPointGuanyuanMeridian,
-        color: Color(0xFFC9A84C),
-      ),
-    ];
+    final baseViewData = _buildFallbackAcupointViewData(
+      context,
+      widget.viewData,
+    );
 
+    if (!widget.isUnlocked || _therapyFuture == null) {
+      return _buildAcupuncturePointsCard(context, baseViewData);
+    }
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _therapyFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _buildAcupuncturePointsCard(
+            context,
+            baseViewData.copyWith(
+              isLoading: true,
+              sourceLabel: '加载 point',
+              statusText: '正在读取当前体质对应的取穴数据...',
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildAcupuncturePointsCard(
+            context,
+            baseViewData.copyWith(
+              sourceLabel: '本地兜底',
+              statusText: 'point 暂未加载成功，先展示基础取穴建议。',
+            ),
+          );
+        }
+
+        final backendViewData = _buildBackendAcupointViewData(
+          context,
+          widget.viewData,
+          snapshot.data ?? const <Map<String, dynamic>>[],
+        );
+        return _buildAcupuncturePointsCard(context, backendViewData);
+      },
+    );
+  }
+
+  Widget _buildAcupuncturePointsCard(
+    BuildContext context,
+    _TherapyAcupointViewData viewData,
+  ) {
+    final l10n = context.l10n;
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.reportTherapyAcupointsIntro,
-            style: TextStyle(
-              fontSize: 12,
-              color: const Color(0xFF3A3028).withValues(alpha: 0.55),
-              height: 1.55,
-            ),
+          _DynamicAcupointHeader(
+            constitutionName: viewData.constitutionName,
+            scorePercent: viewData.scorePercent,
+            intro: viewData.intro,
+            pointCount: viewData.points.length,
+            sourceLabel: viewData.sourceLabel,
+            isLoading: viewData.isLoading,
           ),
+          if (viewData.statusText != null) ...[
+            const SizedBox(height: 10),
+            _AcupointStatusNote(
+              text: viewData.statusText!,
+              color: viewData.isLoading
+                  ? const Color(0xFF4A7FA8)
+                  : const Color(0xFFC9A84C),
+            ),
+          ],
           const SizedBox(height: 14),
-          ...points.map(
+          ...viewData.points.map(
             (p) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _AcuPointCard(point: p),

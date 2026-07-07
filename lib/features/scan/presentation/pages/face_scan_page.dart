@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/di/injector.dart';
+import '../../../../core/layout/app_layout.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/logger.dart';
@@ -24,257 +25,8 @@ import '../utils/scan_capture_geometry.dart';
 import '../utils/scan_debug_error_dialog.dart';
 import '../utils/scan_upload_tenant_context.dart';
 
-// ── 颜色系（与 scan_guide_page 绿色体系一致）
-const _kGreen = Color(0xFF2D6A4F);
-const _kGreenLight = Color(0xFF3DAB78);
-const _kFaceStrictMinArea = 0.04;
-const _kFaceStrictMaxArea = 0.52;
-const _kFaceStrictGuideInsetFactor = 0.0;
-const _kFaceRelaxedMinArea = 0.03;
-const _kFaceRelaxedMaxArea = 0.54;
-const _kFaceRelaxedGuideInsetFactor = 0.0;
-
-@visibleForTesting
-const Duration faceScanHoldDuration = Duration(milliseconds: 800);
-
-@visibleForTesting
-const Duration transientFaceTrackingGraceDuration = Duration(milliseconds: 250);
-
-@visibleForTesting
-const Duration faceScanPostSuccessDelay = Duration(milliseconds: 450);
-
-@visibleForTesting
-Duration faceScanHoldDurationForPlatform(TargetPlatform platform) {
-  return faceScanHoldDuration;
-}
-
-@visibleForTesting
-bool isFaceHoldEligible({
-  required bool hasPermission,
-  required bool hasFaceDetected,
-  required bool isFramed,
-}) {
-  return hasPermission && hasFaceDetected && isFramed;
-}
-
-@visibleForTesting
-bool shouldKeepFaceHoldAlive({
-  required bool hasPermission,
-  required bool hasFaceDetected,
-  required bool isFramed,
-  required bool isRelaxedFramed,
-  required bool holdInProgress,
-}) {
-  if (!hasPermission || !hasFaceDetected) {
-    return false;
-  }
-
-  return holdInProgress ? isRelaxedFramed : isFramed;
-}
-
-@visibleForTesting
-bool shouldAutoStartFaceScan({
-  required TargetPlatform platform,
-  required bool hasPermission,
-  required bool hasFaceDetected,
-  required bool isFramed,
-  required bool hasAcceptedSnapshot,
-  required bool isScanning,
-  required bool isTransitioning,
-}) {
-  if (isScanning ||
-      isTransitioning ||
-      !hasPermission ||
-      !hasFaceDetected ||
-      !hasAcceptedSnapshot) {
-    return false;
-  }
-
-  return isFramed;
-}
-
-@visibleForTesting
-bool shouldBeginFaceScan({
-  required TargetPlatform platform,
-  required bool hasPermission,
-  required bool hasFaceDetected,
-  required bool isFramed,
-  required bool isBusy,
-  required bool isTransitioning,
-  required bool isPaused,
-}) {
-  if (isBusy ||
-      isTransitioning ||
-      isPaused ||
-      !hasPermission ||
-      !hasFaceDetected) {
-    return false;
-  }
-
-  return isFramed;
-}
-
-@visibleForTesting
-bool shouldRetainPreviousFaceTracking({
-  required bool holdInProgress,
-  required bool hasFaceDetected,
-  required bool hasLandmarks,
-  required Duration timeSinceLastTrackedFace,
-}) {
-  if (!holdInProgress || hasFaceDetected || hasLandmarks) {
-    return false;
-  }
-
-  return timeSinceLastTrackedFace <= transientFaceTrackingGraceDuration;
-}
-
-@visibleForTesting
-bool shouldShowFaceReadyStatus({
-  required bool hasPermission,
-  required bool hasFaceDetected,
-  required String faceDirection,
-}) {
-  return hasPermission && hasFaceDetected && faceDirection.isEmpty;
-}
-
-@visibleForTesting
-bool isFaceFramedForUploadBounds({
-  required Rect bounds,
-  required Rect guideRect,
-  required double area,
-  required bool allowHoldDrift,
-}) {
-  final minArea = allowHoldDrift ? _kFaceRelaxedMinArea : _kFaceStrictMinArea;
-  final maxArea = allowHoldDrift ? _kFaceRelaxedMaxArea : _kFaceStrictMaxArea;
-  final guideInsetFactor = allowHoldDrift
-      ? _kFaceRelaxedGuideInsetFactor
-      : _kFaceStrictGuideInsetFactor;
-
-  return area >= minArea &&
-      area <= maxArea &&
-      isNormalizedBoundsInsideGuide(
-        bounds: bounds,
-        guideRect: guideRect,
-        guideInsetFactor: guideInsetFactor,
-      );
-}
-
-@visibleForTesting
-bool shouldMirrorFaceUploadMask({
-  required TargetPlatform platform,
-  required bool isBackCamera,
-}) {
-  return shouldMirrorFaceFrameMask(
-    platform: platform,
-    isBackCamera: isBackCamera,
-  );
-}
-
-@immutable
-class AcceptedFaceSnapshot {
-  AcceptedFaceSnapshot({
-    required this.guideRect,
-    required List<Offset> normalizedLandmarks,
-    required this.analysisImageSize,
-    required this.isBackCamera,
-    required this.mirrored,
-    this.generationId,
-    this.timestampMs,
-  }) : normalizedLandmarks = List<Offset>.unmodifiable(normalizedLandmarks);
-
-  final Rect guideRect;
-  final List<Offset> normalizedLandmarks;
-  final Size analysisImageSize;
-  final bool isBackCamera;
-  final bool mirrored;
-  final int? generationId;
-  final int? timestampMs;
-
-  ScanCaptureGuide toCaptureGuide() {
-    final rect = buildFaceCaptureRect(
-      guideRect: guideRect,
-      faceBounds: normalizedBoundingRect(normalizedLandmarks),
-    );
-    return ScanCaptureGuide(
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-    );
-  }
-}
-
-@visibleForTesting
-AcceptedFaceSnapshot? buildAcceptedFaceSnapshot({
-  required Rect guideRect,
-  required List<Offset> normalizedLandmarks,
-  required Size analysisImageSize,
-  required bool isBackCamera,
-  required TargetPlatform platform,
-  int? generationId,
-  int? timestampMs,
-  bool? mirrored,
-}) {
-  if (guideRect.isEmpty || normalizedLandmarks.isEmpty) {
-    return null;
-  }
-
-  return AcceptedFaceSnapshot(
-    guideRect: guideRect,
-    normalizedLandmarks: normalizedLandmarks,
-    analysisImageSize: analysisImageSize,
-    isBackCamera: isBackCamera,
-    mirrored:
-        mirrored ??
-        shouldMirrorFaceUploadMask(
-          platform: platform,
-          isBackCamera: isBackCamera,
-        ),
-    generationId: generationId,
-    timestampMs: timestampMs,
-  );
-}
-
-@visibleForTesting
-AcceptedFaceSnapshot? latchAcceptedFaceSnapshot({
-  required AcceptedFaceSnapshot? currentLatchedSnapshot,
-  required AcceptedFaceSnapshot? nextSnapshot,
-}) {
-  return currentLatchedSnapshot ?? nextSnapshot;
-}
-
-@visibleForTesting
-List<Offset> remapLandmarksToCaptureGuide({
-  required Iterable<Offset> normalizedLandmarks,
-  required Rect guideRect,
-}) {
-  if (guideRect.isEmpty || guideRect.width <= 0 || guideRect.height <= 0) {
-    return const <Offset>[];
-  }
-
-  return normalizedLandmarks
-      .map((point) {
-        final dx = (point.dx - guideRect.left) / guideRect.width;
-        final dy = (point.dy - guideRect.top) / guideRect.height;
-        return Offset(dx, dy);
-      })
-      .toList(growable: false);
-}
-
-@visibleForTesting
-bool hasRenderableFaceFrameUpload({
-  required List<Offset> normalizedLandmarks,
-  required String sourceImagePath,
-  required String faceFrameFilePath,
-}) {
-  if (normalizedLandmarks.isEmpty ||
-      sourceImagePath.isEmpty ||
-      faceFrameFilePath.isEmpty) {
-    return false;
-  }
-
-  return sourceImagePath != faceFrameFilePath;
-}
+part 'face_scan/face_scan_logic.dart';
+part 'face_scan/face_scan_widgets.dart';
 
 class FaceScanPage extends StatefulWidget {
   const FaceScanPage({super.key});
@@ -319,18 +71,25 @@ class _FaceScanPageState extends State<FaceScanPage>
   bool _autoStartScanCheckQueued = false;
   String _faceDirection = ''; // 位置引导文字（空 = 居中或无脸）
 
+  Size get _faceGuideSize => AppLayoutMetrics.of(context).scanGuideSize(
+    _cameraViewportSize,
+    baseWidth: _faceGuideWidth,
+    baseHeight: _faceGuideHeight,
+    maxHeightFraction: 0.62,
+  );
+
   Rect get _faceGuideRectNormalized => buildNormalizedGuideRect(
     _cameraViewportSize,
     alignment: _faceGuideAlignment,
-    guideWidth: _faceGuideWidth,
-    guideHeight: _faceGuideHeight,
+    guideWidth: _faceGuideSize.width,
+    guideHeight: _faceGuideSize.height,
   );
 
   Rect get _faceGuideRectOnViewport => buildViewportGuideRect(
     _cameraViewportSize,
     alignment: _faceGuideAlignment,
-    guideWidth: _faceGuideWidth,
-    guideHeight: _faceGuideHeight,
+    guideWidth: _faceGuideSize.width,
+    guideHeight: _faceGuideSize.height,
   );
 
   AcceptedFaceSnapshot? get _liveAcceptedFaceSnapshot =>
@@ -401,7 +160,10 @@ class _FaceScanPageState extends State<FaceScanPage>
     if (!_hasPermission) {
       return l10n.scanCameraPermissionRequired;
     }
-    if (_isScanning || _isSubmitting) {
+    if (_isSubmitting) {
+      return l10n.scanUploading;
+    }
+    if (_isScanning) {
       return l10n.scanScanning;
     }
     if (_isFaceReadyToHold) {
@@ -891,8 +653,14 @@ class _FaceScanPageState extends State<FaceScanPage>
 
   Widget _buildTopGuideCard() {
     final l10n = context.l10n;
+    final layout = AppLayoutMetrics.of(context);
+    final sideInset = layout.centeredHorizontalInset(
+      MediaQuery.sizeOf(context).width,
+      maxContentWidth: layout.scanPanelMaxWidth,
+      minHorizontalPadding: 16,
+    );
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      margin: EdgeInsets.fromLTRB(sideInset, 8, sideInset, 0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1160,8 +928,9 @@ class _FaceScanPageState extends State<FaceScanPage>
       hasFaceDetected: _hasFaceDetected,
       faceDirection: _faceDirection,
     );
-    const frameW = 210.0;
-    const frameH = 262.0;
+    final guideSize = _faceGuideSize;
+    final frameW = guideSize.width;
+    final frameH = guideSize.height;
 
     return SizedBox(
       width: frameW,
@@ -1267,7 +1036,7 @@ class _FaceScanPageState extends State<FaceScanPage>
               child: (_isScanning || _isSubmitting)
                   ? _HoldFeedback(
                       label: _isSubmitting
-                          ? l10n.scanScanning
+                          ? l10n.scanUploading
                           : l10n.scanKeepStill,
                       progress: _scanProgress,
                     )
@@ -1292,8 +1061,14 @@ class _FaceScanPageState extends State<FaceScanPage>
 
   Widget _buildBottomCard() {
     final l10n = context.l10n;
+    final layout = AppLayoutMetrics.of(context);
+    final sideInset = layout.centeredHorizontalInset(
+      MediaQuery.sizeOf(context).width,
+      maxContentWidth: layout.scanPanelMaxWidth,
+      minHorizontalPadding: 16,
+    );
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      margin: EdgeInsets.fromLTRB(sideInset, 0, sideInset, 0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1525,342 +1300,4 @@ class _FaceScanPageState extends State<FaceScanPage>
   }
 
   double? _asDouble(dynamic v) => v is num ? v.toDouble() : null;
-}
-
-// ── 共用小组件 ─────────────────────────────────────────────────────────────
-
-/// Tips 条目（图标 + 文字，竖向排列）
-class _TipItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _TipItem({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE8F5EE),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: const Color(0xFF2D6A4F).withValues(alpha: 0.15),
-          ),
-        ),
-        child: Icon(icon, size: 18, color: const Color(0xFF2D6A4F)),
-      ),
-      const SizedBox(height: 5),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          color: const Color(0xFF3A3028).withValues(alpha: 0.6),
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    ],
-  );
-}
-
-class _StatusPill extends StatelessWidget {
-  final String label;
-  final bool detected;
-  const _StatusPill({required this.label, required this.detected});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.92),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(
-        color: detected
-            ? const Color(0xFF2D6A4F).withValues(alpha: 0.5)
-            : const Color(0xFF2D6A4F).withValues(alpha: 0.25),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Text(
-      label,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        color: detected
-            ? const Color(0xFF2D6A4F)
-            : const Color(0xFF3A3028).withValues(alpha: 0.6),
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-      ),
-    ),
-  );
-}
-
-class _HoldFeedback extends StatelessWidget {
-  final String label;
-  final double progress;
-
-  const _HoldFeedback({required this.label, required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _StatusPill(label: label, detected: true),
-        const SizedBox(height: 8),
-        SizedBox(width: 120, child: _ScanProgressBar(progress: progress)),
-      ],
-    );
-  }
-}
-
-class _BottomStatusPrompt extends StatelessWidget {
-  final String label;
-  final bool highlighted;
-
-  const _BottomStatusPrompt({required this.label, required this.highlighted});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: double.infinity,
-      height: 52,
-      decoration: BoxDecoration(
-        gradient: highlighted
-            ? const LinearGradient(
-                colors: [Color(0xFF1D5E40), _kGreen, _kGreenLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: highlighted ? null : const Color(0xFFEAE6E0),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: highlighted
-            ? [
-                BoxShadow(
-                  color: _kGreen.withValues(alpha: 0.22),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
-      ),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Text(
-        label,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: highlighted ? Colors.white : const Color(0xFF6F6861),
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
-        ),
-      ),
-    );
-  }
-}
-
-class _ScanProgressBar extends StatelessWidget {
-  final double progress;
-  const _ScanProgressBar({required this.progress});
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      Container(
-        height: 4,
-        decoration: BoxDecoration(
-          color: _kGreen.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      FractionallySizedBox(
-        widthFactor: progress.clamp(0.0, 1.0),
-        child: Container(
-          height: 4,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF2D8A5E), Color(0xFF3DAB78)],
-            ),
-            borderRadius: BorderRadius.circular(2),
-            boxShadow: [
-              BoxShadow(color: _kGreen.withValues(alpha: 0.35), blurRadius: 6),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-class _ScanCorner extends StatelessWidget {
-  final Color color;
-  final bool top;
-  final bool left;
-  const _ScanCorner({
-    required this.color,
-    required this.top,
-    required this.left,
-  });
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 24,
-    height: 24,
-    child: CustomPaint(
-      painter: _ScanCornerPainter(color: color, top: top, left: left),
-    ),
-  );
-}
-
-class _ScanCornerPainter extends CustomPainter {
-  final Color color;
-  final bool top;
-  final bool left;
-  const _ScanCornerPainter({
-    required this.color,
-    required this.top,
-    required this.left,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    const r = 8.0;
-    final path = Path();
-    if (top && left) {
-      path.moveTo(0, size.height);
-      path.lineTo(0, r);
-      path.arcToPoint(Offset(r, 0), radius: const Radius.circular(r));
-      path.lineTo(size.width, 0);
-    } else if (top) {
-      path.moveTo(0, 0);
-      path.lineTo(size.width - r, 0);
-      path.arcToPoint(Offset(size.width, r), radius: const Radius.circular(r));
-      path.lineTo(size.width, size.height);
-    } else if (left) {
-      path.moveTo(0, 0);
-      path.lineTo(0, size.height - r);
-      path.arcToPoint(Offset(r, size.height), radius: const Radius.circular(r));
-      path.lineTo(size.width, size.height);
-    } else {
-      path.moveTo(0, size.height);
-      path.lineTo(size.width - r, size.height);
-      path.arcToPoint(
-        Offset(size.width, size.height - r),
-        radius: const Radius.circular(r),
-      );
-      path.lineTo(size.width, 0);
-    }
-    canvas.drawPath(path, p);
-  }
-
-  @override
-  bool shouldRepaint(_ScanCornerPainter o) => false;
-}
-
-// ── 背景画布（与 scan_guide_page 完全一致）──────────────────────────────────
-
-class _BgPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final topPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(1.2, -0.8),
-        radius: 0.9,
-        colors: [
-          const Color(0xFF2D6A4F).withValues(alpha: 0.06),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), topPaint);
-
-    final bottomPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-1.1, 1.3),
-        radius: 0.85,
-        colors: [
-          const Color(0xFF6B5B95).withValues(alpha: 0.05),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bottomPaint);
-
-    final sealPaint = Paint()
-      ..color = const Color(0xFF2D6A4F).withValues(alpha: 0.04)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawCircle(Offset(size.width - 20, 60), 52, sealPaint);
-    canvas.drawCircle(Offset(size.width - 20, 60), 42, sealPaint);
-
-    final gridPaint = Paint()
-      ..color = const Color(0xFF2D6A4F).withValues(alpha: 0.025)
-      ..strokeWidth = 0.5;
-    for (double x = 0; x < size.width; x += 28) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-    for (double y = 0; y < size.height; y += 28) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter _) => false;
-}
-
-// ── 方向引导气泡 ──────────────────────────────────────────────────────────────
-
-class _DirectionPill extends StatelessWidget {
-  final String direction;
-  const _DirectionPill({required this.direction});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      child: Container(
-        key: ValueKey(direction),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFF8C42).withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF8C42).withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Text(
-          direction,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    );
-  }
 }

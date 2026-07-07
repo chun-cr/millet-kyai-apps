@@ -280,7 +280,7 @@ void main() {
           shouldShowFaceReadyStatus(
             hasPermission: true,
             hasFaceDetected: true,
-            faceDirection: '�?请向左移�?,
+            faceDirection: 'move left',
           ),
           isFalse,
         );

@@ -34,11 +34,13 @@ class ReportConstitutionScoreData {
     required this.id,
     required this.name,
     required this.scorePercent,
+    this.hasScore = true,
   });
 
   final String id;
   final String name;
   final double scorePercent;
+  final bool hasScore;
 
   double get scoreFraction => (scorePercent / 100).clamp(0.0, 1.0).toDouble();
 }
@@ -408,18 +410,69 @@ List<ReportConstitutionScoreData> _buildConstitutionScores(
   final scoreAdjustments = _constitutionScoreAdjustments(
     detail.tzpdAnalysisResult,
   );
-  final scores = detail.analysisResult.tzData
-      .where((item) => item.name.trim().isNotEmpty)
-      .map(
-        (item) => ReportConstitutionScoreData(
-          id: item.id,
-          name: item.name.trim(),
-          scorePercent: _clampPercent(
-            item.score + (scoreAdjustments[item.id] ?? 0),
-          ),
-        ),
-      )
-      .toList(growable: true);
+  final scores = <ReportConstitutionScoreData>[];
+  final seenKeys = <String>{};
+
+  void addScore({
+    required String id,
+    required String name,
+    required double scorePercent,
+    bool hasScore = true,
+  }) {
+    final normalizedId = id.trim();
+    final normalizedName = name.trim();
+    final resolvedName = normalizedName.isNotEmpty
+        ? normalizedName
+        : _constitutionNameForId(normalizedId);
+    if (resolvedName.isEmpty) {
+      return;
+    }
+
+    final key = normalizedId.isNotEmpty
+        ? 'id:$normalizedId'
+        : 'name:${resolvedName.toLowerCase()}';
+    if (!seenKeys.add(key)) {
+      return;
+    }
+
+    scores.add(
+      ReportConstitutionScoreData(
+        id: normalizedId,
+        name: resolvedName,
+        scorePercent: _clampPercent(scorePercent),
+        hasScore: hasScore,
+      ),
+    );
+  }
+
+  for (final item in detail.analysisResult.tzData) {
+    addScore(
+      id: item.id,
+      name: item.name,
+      scorePercent: item.score + (scoreAdjustments[item.id] ?? 0),
+      hasScore:
+          _hasConstitutionScoreField(item.raw) ||
+          scoreAdjustments.containsKey(item.id),
+    );
+  }
+
+  if (scores.isEmpty) {
+    for (final item in _constitutionScoresFromTzpd(detail.tzpdAnalysisResult)) {
+      addScore(id: item.$1, name: item.$2, scorePercent: item.$3);
+    }
+  }
+
+  final primaryConstitution = detail.analysisResult.tz;
+  final primaryHasScore = _hasConstitutionScoreField(primaryConstitution.raw);
+  if (primaryConstitution.name.trim().isNotEmpty &&
+      (primaryHasScore || scores.isEmpty)) {
+    addScore(
+      id: primaryConstitution.id,
+      name: primaryConstitution.name,
+      scorePercent: primaryConstitution.score,
+      hasScore: primaryHasScore,
+    );
+  }
 
   scores.sort((a, b) => b.scorePercent.compareTo(a.scorePercent));
   return List.unmodifiable(scores);
@@ -594,12 +647,93 @@ Map<String, double> _constitutionScoreAdjustments(
 
     // 历史接口里既出现过 score，也出现过 prob，量纲还可能是 0-1 或 0-100。
     // 先做字段兜底，再统一归一到百分制。
-    final score = _normalizePercent(
-      _asNum(value['score']) ?? _asNum(value['prob']),
-    );
+    final rawScore = _asNum(value['score']) ?? _asNum(value['prob']);
+    if (rawScore == null) {
+      continue;
+    }
+    final score = _normalizePercent(rawScore);
     adjustments[id] = score;
   }
   return adjustments;
+}
+
+List<(String, String, double)> _constitutionScoresFromTzpd(
+  Map<String, dynamic> tzpdAnalysisResult,
+) {
+  final results = tzpdAnalysisResult['results'];
+  if (results is! List) {
+    return const <(String, String, double)>[];
+  }
+
+  final scores = <(String, String, double)>[];
+  for (final item in results) {
+    final value = _asMap(item);
+    final id = _firstNonEmpty([
+      _asString(value['id']),
+      _asString(value['physiqueId']),
+      _asString(value['constitutionId']),
+      _asString(value['tzId']),
+      _asString(value['typeId']),
+    ]);
+    final name = _firstNonEmpty([
+      _asString(value['name']),
+      _asString(value['physiqueName']),
+      _asString(value['constitutionName']),
+      _asString(value['tzName']),
+      _asString(value['typeName']),
+      _asString(value['displayName']),
+    ]);
+    final rawScore =
+        _asNum(value['score']) ??
+        _asNum(value['prob']) ??
+        _asNum(value['percent']) ??
+        _asNum(value['ratio']) ??
+        _asNum(value['value']);
+    if (rawScore == null) {
+      continue;
+    }
+
+    final resolvedName = name.isNotEmpty ? name : _constitutionNameForId(id);
+    if (resolvedName.isEmpty) {
+      continue;
+    }
+    scores.add((id, resolvedName, _normalizePercent(rawScore)));
+  }
+  return List.unmodifiable(scores);
+}
+
+String _constitutionNameForId(String id) {
+  return switch (id.trim()) {
+    '1' => '平和质',
+    '2' => '气虚质',
+    '3' => '阳虚质',
+    '4' => '阴虚质',
+    '5' => '痰湿质',
+    '6' => '湿热质',
+    '7' => '血瘀质',
+    '8' => '气郁质',
+    '9' => '特禀质',
+    _ => '',
+  };
+}
+
+String _firstNonEmpty(List<String> values) {
+  for (final value in values) {
+    final normalized = value.trim();
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+  }
+  return '';
+}
+
+bool _hasConstitutionScoreField(Map<String, dynamic> value) {
+  for (final key in const ['score', 'prob', 'percent', 'ratio', 'value']) {
+    if (_asNum(value[key]) != null) {
+      return true;
+    }
+  }
+  return false;
 }
 
 ReportHealthRadarSymptomData? _mapClassicHealthRadarSymptom(

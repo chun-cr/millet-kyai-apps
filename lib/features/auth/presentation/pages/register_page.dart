@@ -26,6 +26,7 @@ import 'package:millet_kyai_apps/features/profile/presentation/providers/profile
 import 'package:millet_kyai_apps/features/share/presentation/providers/share_referral_provider.dart';
 
 part 'complete_profile_page.dart';
+part 'register_page_widgets.dart';
 
 String? _normalizeAuthRedirectLocation(String? value) {
   final normalized = value?.trim();
