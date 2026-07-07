@@ -1,4 +1,5 @@
 import AVFoundation
+import Foundation
 import UIKit
 
 protocol CameraManagerDelegate: AnyObject {
@@ -97,10 +98,14 @@ final class CameraManager: NSObject {
             }
 
             self.currentPosition = desiredPosition
+            let transitionStart = CFAbsoluteTimeGetCurrent()
+            let configureStart = CFAbsoluteTimeGetCurrent()
             self.configureSessionIfNeeded()
+            let configureElapsedMs = (CFAbsoluteTimeGetCurrent() - configureStart) * 1000
 
             if self.session.isRunning {
-                print("CameraManager: Session already running.")
+                let configureMsText = String(format: "%.0f", configureElapsedMs)
+                print("CameraManager: Session already running. configureMs=\(configureMsText)")
                 if let completion {
                     DispatchQueue.main.async { completion() }
                 }
@@ -108,8 +113,14 @@ final class CameraManager: NSObject {
             }
 
             print("CameraManager: Starting session... (Position: \(self.currentPosition.rawValue))")
+            let startRunningStart = CFAbsoluteTimeGetCurrent()
             self.session.startRunning()
-            print("CameraManager: Session started isRunning=\(self.session.isRunning)")
+            let startRunningElapsedMs = (CFAbsoluteTimeGetCurrent() - startRunningStart) * 1000
+            let totalElapsedMs = (CFAbsoluteTimeGetCurrent() - transitionStart) * 1000
+            let configureMsText = String(format: "%.0f", configureElapsedMs)
+            let startRunningMsText = String(format: "%.0f", startRunningElapsedMs)
+            let totalMsText = String(format: "%.0f", totalElapsedMs)
+            print("CameraManager: Session started isRunning=\(self.session.isRunning) configureMs=\(configureMsText) startRunningMs=\(startRunningMsText) totalMs=\(totalMsText)")
             if let completion {
                 DispatchQueue.main.async { completion() }
             }

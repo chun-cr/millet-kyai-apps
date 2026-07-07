@@ -36,9 +36,11 @@ final class FaceLandmarkerService: NSObject {
         workQueue.async { [weak self] in
             guard let self = self, self.faceLandmarker == nil, !self.isInitializing else { return }
             self.isInitializing = true
+            let setupStart = CFAbsoluteTimeGetCurrent()
             
             guard let modelPath = ModelAssetLocator.pathInBundle(name: "face_landmarker", ext: "task") else {
                 assertionFailure("Missing face_landmarker.task in app bundle. Add it under assets/models/ and rebuild.")
+                print("FaceLandmarkerService: model path missing.")
                 self.isInitializing = false
                 return
             }
@@ -54,6 +56,13 @@ final class FaceLandmarkerService: NSObject {
             options.baseOptions.modelAssetPath = modelPath
 
             self.faceLandmarker = try? FaceLandmarker(options: options)
+            let setupElapsedMs = (CFAbsoluteTimeGetCurrent() - setupStart) * 1000
+            let setupMsText = String(format: "%.0f", setupElapsedMs)
+            if self.faceLandmarker == nil {
+                print("FaceLandmarkerService: setup failed setupMs=\(setupMsText)")
+            } else {
+                print("FaceLandmarkerService: setup completed setupMs=\(setupMsText)")
+            }
             self.isInitializing = false
         }
     }

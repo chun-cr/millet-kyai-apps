@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../utils/scan_capture_geometry.dart';
 
-enum TongueDetectionTuning { standard, android }
+enum TongueDetectionTuning { standard, android, ios }
 
 /// Flutter 侧的“舌头是否足够伸出”代理判定规则。
 ///
@@ -48,7 +48,8 @@ class TongueProtrusionProxy {
       return false;
     }
 
-    if (_hasMiniProgramStyleLipGap(mouthLandmarks)) {
+    if (_hasMiniProgramStyleLipGap(mouthLandmarks) &&
+        tuning == TongueDetectionTuning.android) {
       return true;
     }
 
@@ -204,10 +205,22 @@ class _TongueDetectionThresholds {
     lowerLipDropThreshold: 0.06,
   );
 
+  static const _TongueDetectionThresholds ios = _TongueDetectionThresholds(
+    minSupportedCentralDropRatio: 0.034,
+    minSupportedCentralDropToHeightRatio: 0.26,
+    tongueOutThreshold: 0.24,
+    directJawOpenThreshold: 0.12,
+    jawOpenThreshold: 0.18,
+    mouthFunnelThreshold: 0.10,
+    lowerLipDropThreshold: 0.09,
+  );
+
   static _TongueDetectionThresholds forTuning(TongueDetectionTuning tuning) {
     switch (tuning) {
       case TongueDetectionTuning.android:
         return android;
+      case TongueDetectionTuning.ios:
+        return ios;
       case TongueDetectionTuning.standard:
         return standard;
     }

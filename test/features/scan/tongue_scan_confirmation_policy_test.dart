@@ -42,7 +42,7 @@ void main() {
     );
 
     test(
-      'accepts mini-program style upper/lower lip gap without blendshapes',
+      'accepts mini-program style upper/lower lip gap on android tuning',
       () {
         expect(
           TongueProtrusionProxy.isFrameEligible(
@@ -68,11 +68,43 @@ void main() {
               Offset(0.20, 0.80),
               Offset(0.80, 0.80),
             ],
+            tuning: TongueDetectionTuning.android,
           ),
           isTrue,
         );
       },
     );
+
+    test('rejects lip-gap-only mouth opening on ios tuning', () {
+      expect(
+        TongueProtrusionProxy.isFrameEligible(
+          mouthLandmarks: const [
+            Offset(0.34, 0.50),
+            Offset(0.36, 0.55),
+            Offset(0.40, 0.58),
+            Offset(0.44, 0.585),
+            Offset(0.48, 0.59),
+            Offset(0.50, 0.60),
+            Offset(0.52, 0.59),
+            Offset(0.56, 0.585),
+            Offset(0.60, 0.58),
+            Offset(0.64, 0.55),
+            Offset(0.66, 0.50),
+            Offset(0.50, 0.48),
+            Offset(0.50, 0.525),
+          ],
+          mouthCenter: const Offset(0.50, 0.502),
+          faceLandmarks: const [
+            Offset(0.20, 0.20),
+            Offset(0.80, 0.20),
+            Offset(0.20, 0.80),
+            Offset(0.80, 0.80),
+          ],
+          tuning: TongueDetectionTuning.ios,
+        ),
+        isFalse,
+      );
+    });
 
     test('accepts strong tongue geometry when blendshapes support it', () {
       expect(
@@ -235,6 +267,33 @@ void main() {
           ],
           blendshapes: const {'jawOpen': 0.20, 'mouthFunnel': 0.12},
           tuning: TongueDetectionTuning.android,
+        ),
+        isTrue,
+      );
+    });
+
+    test('accepts direct tongueOut support on ios tuning', () {
+      expect(
+        TongueProtrusionProxy.isFrameEligible(
+          mouthLandmarks: const [
+            Offset(0.50, 0.45),
+            Offset(0.50, 0.50),
+            Offset(0.50, 0.533),
+            Offset(0.34, 0.50),
+            Offset(0.66, 0.50),
+            Offset(0.38, 0.52),
+            Offset(0.62, 0.52),
+            Offset(0.70, 0.49),
+          ],
+          mouthCenter: const Offset(0.50, 0.50),
+          faceLandmarks: const [
+            Offset(0.20, 0.20),
+            Offset(0.80, 0.20),
+            Offset(0.20, 0.80),
+            Offset(0.80, 0.80),
+          ],
+          blendshapes: const {'tongueOut': 0.25, 'jawOpen': 0.14},
+          tuning: TongueDetectionTuning.ios,
         ),
         isTrue,
       );

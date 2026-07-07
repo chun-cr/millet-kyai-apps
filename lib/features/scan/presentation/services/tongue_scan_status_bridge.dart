@@ -188,9 +188,13 @@ class TongueScanStatusBridge {
       return const Stream<TongueScanStatus>.empty();
     }
 
-    final tuning = resolveTongueDetectionTuning(isAndroid: Platform.isAndroid);
+    final tuning = resolveTongueDetectionTuning(
+      isAndroid: Platform.isAndroid,
+      isIOS: Platform.isIOS,
+    );
     final confirmationWindow = buildTongueConfirmationWindow(
       isAndroid: Platform.isAndroid,
+      isIOS: Platform.isIOS,
     );
 
     return _tongueEvents.receiveBroadcastStream().map((event) {
@@ -227,17 +231,29 @@ class TongueScanStatusBridge {
 }
 
 @visibleForTesting
-TongueDetectionTuning resolveTongueDetectionTuning({required bool isAndroid}) {
-  return isAndroid
-      ? TongueDetectionTuning.android
-      : TongueDetectionTuning.standard;
+TongueDetectionTuning resolveTongueDetectionTuning({
+  required bool isAndroid,
+  bool isIOS = false,
+}) {
+  if (isAndroid) {
+    return TongueDetectionTuning.android;
+  }
+  if (isIOS) {
+    return TongueDetectionTuning.ios;
+  }
+  return TongueDetectionTuning.standard;
 }
 
 @visibleForTesting
 TongueConfirmationWindow buildTongueConfirmationWindow({
   required bool isAndroid,
+  bool isIOS = false,
 }) {
-  return isAndroid
-      ? TongueConfirmationWindow(windowSize: 6, requiredEligibleFrames: 4)
-      : TongueConfirmationWindow();
+  if (isAndroid) {
+    return TongueConfirmationWindow(windowSize: 6, requiredEligibleFrames: 4);
+  }
+  if (isIOS) {
+    return TongueConfirmationWindow(windowSize: 10, requiredEligibleFrames: 8);
+  }
+  return TongueConfirmationWindow();
 }

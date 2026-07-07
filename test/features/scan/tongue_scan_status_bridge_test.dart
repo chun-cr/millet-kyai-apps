@@ -12,9 +12,16 @@ void main() {
       );
     });
 
-    test('keeps standard tongue tuning off android', () {
+    test('uses ios tongue tuning on ios', () {
       expect(
-        resolveTongueDetectionTuning(isAndroid: false),
+        resolveTongueDetectionTuning(isAndroid: false, isIOS: true),
+        TongueDetectionTuning.ios,
+      );
+    });
+
+    test('keeps standard tongue tuning for fallback platforms', () {
+      expect(
+        resolveTongueDetectionTuning(isAndroid: false, isIOS: false),
         TongueDetectionTuning.standard,
       );
     });
@@ -26,8 +33,21 @@ void main() {
       expect(window.requiredEligibleFrames, 4);
     });
 
-    test('keeps the stricter confirmation window off android', () {
-      final window = buildTongueConfirmationWindow(isAndroid: false);
+    test('uses the strictest confirmation window on ios', () {
+      final window = buildTongueConfirmationWindow(
+        isAndroid: false,
+        isIOS: true,
+      );
+
+      expect(window.windowSize, 10);
+      expect(window.requiredEligibleFrames, 8);
+    });
+
+    test('keeps the standard confirmation window for fallback platforms', () {
+      final window = buildTongueConfirmationWindow(
+        isAndroid: false,
+        isIOS: false,
+      );
 
       expect(window.windowSize, 8);
       expect(window.requiredEligibleFrames, 6);
