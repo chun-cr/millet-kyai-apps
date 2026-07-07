@@ -39,8 +39,8 @@ void main() {
         isIOS: true,
       );
 
-      expect(window.windowSize, 10);
-      expect(window.requiredEligibleFrames, 8);
+      expect(window.windowSize, 8);
+      expect(window.requiredEligibleFrames, 6);
     });
 
     test('keeps the standard confirmation window for fallback platforms', () {

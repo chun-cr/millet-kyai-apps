@@ -2,7 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 
-enum AppLogCategory { general, network }
+enum AppLogCategory { general, network, error }
 
 class AppLogger {
   static const String _mode = String.fromEnvironment(
@@ -24,6 +24,10 @@ class AppLogger {
     log(message, category: AppLogCategory.network);
   }
 
+  static void error(String message) {
+    log(message, category: AppLogCategory.error);
+  }
+
   static bool _shouldLog(AppLogCategory category) {
     switch (_mode.toLowerCase()) {
       case 'none':
@@ -31,10 +35,12 @@ class AppLogger {
       case 'all':
         return true;
       case 'general':
-        return category == AppLogCategory.general;
+        return category == AppLogCategory.general ||
+            category == AppLogCategory.error;
       case 'network':
       default:
-        return category == AppLogCategory.network;
+        return category == AppLogCategory.network ||
+            category == AppLogCategory.error;
     }
   }
 }

@@ -206,13 +206,13 @@ class _TongueDetectionThresholds {
   );
 
   static const _TongueDetectionThresholds ios = _TongueDetectionThresholds(
-    minSupportedCentralDropRatio: 0.034,
-    minSupportedCentralDropToHeightRatio: 0.26,
-    tongueOutThreshold: 0.24,
-    directJawOpenThreshold: 0.12,
-    jawOpenThreshold: 0.18,
-    mouthFunnelThreshold: 0.10,
-    lowerLipDropThreshold: 0.09,
+    minSupportedCentralDropRatio: 0.030,
+    minSupportedCentralDropToHeightRatio: 0.22,
+    tongueOutThreshold: 0.21,
+    directJawOpenThreshold: 0.10,
+    jawOpenThreshold: 0.14,
+    mouthFunnelThreshold: 0.08,
+    lowerLipDropThreshold: 0.07,
   );
 
   static _TongueDetectionThresholds forTuning(TongueDetectionTuning tuning) {

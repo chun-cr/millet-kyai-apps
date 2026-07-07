@@ -26,6 +26,7 @@ import 'package:millet_kyai_apps/features/report/presentation/pages/report_check
 import 'package:millet_kyai_apps/features/report/presentation/pages/report_project_detail_page.dart';
 import 'package:millet_kyai_apps/features/report/presentation/pages/report_product_detail_page.dart';
 import 'package:millet_kyai_apps/features/history/presentation/pages/history/history_page.dart';
+import 'package:millet_kyai_apps/core/widgets/app_error_fallback.dart';
 
 // ─── 路由路径常量 ─────────────────────────────────────────────────
 class AppRoutes {
@@ -166,6 +167,10 @@ ReportPage _buildReportPage(GoRouterState state) {
 final appRouter = GoRouter(
   initialLocation: AppRoutes.login,
   debugLogDiagnostics: true,
+  errorBuilder: (context, state) => AppRouteErrorPage(
+    error: state.error,
+    onPrimaryAction: () => context.go(AppRoutes.home),
+  ),
   refreshListenable: _previewAuthState,
   redirect: (context, state) => resolvePreviewAuthRedirect(
     matchedLocation: state.matchedLocation,

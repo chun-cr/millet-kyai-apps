@@ -47,6 +47,7 @@ class _FaceScanPageState extends State<FaceScanPage>
   bool _hasPermission = false;
   bool _isBackCamera = false;
   bool _cameraReady = false; // PlatformView 延迟创建标志
+  bool _hasReceivedCameraFrame = false;
   bool _hasFaceDetected = false;
   bool _isScanning = false;
   bool _isSubmitting = false;
@@ -68,6 +69,7 @@ class _FaceScanPageState extends State<FaceScanPage>
   DateTime? _lastTrackedFaceAt;
   String? _lastFaceHoldDiagnosticsSignature;
   bool _autoStartScanCheckQueued = false;
+  FaceSubmitStage _submitStage = FaceSubmitStage.idle;
   String _faceDirection = ''; // 位置引导文字（空 = 居中或无脸）
 
   Size get _faceGuideSize => AppLayoutMetrics.of(context).scanGuideSize(
@@ -161,7 +163,7 @@ class _FaceScanPageState extends State<FaceScanPage>
       return l10n.scanCameraPermissionRequired;
     }
     if (_isSubmitting) {
-      return l10n.scanUploading;
+      return _faceSubmitStageLabel;
     }
     if (_isScanning) {
       return l10n.scanScanning;
@@ -179,6 +181,21 @@ class _FaceScanPageState extends State<FaceScanPage>
       !_isScanning &&
       !_isSubmitting &&
       (_faceDirection.isNotEmpty || !_hasFaceDetected || !_isFaceReadyToHold);
+
+  String get _faceSubmitStageLabel {
+    switch (_submitStage) {
+      case FaceSubmitStage.capturing:
+        return '采集中';
+      case FaceSubmitStage.processing:
+        return '处理中';
+      case FaceSubmitStage.uploading:
+        return context.l10n.scanUploading;
+      case FaceSubmitStage.analyzing:
+        return '分析中';
+      case FaceSubmitStage.idle:
+        return context.l10n.scanUploading;
+    }
+  }
 
   Duration get _requiredFaceScanHoldDuration =>
       faceScanHoldDurationForPlatform(defaultTargetPlatform);
@@ -211,14 +228,13 @@ class _FaceScanPageState extends State<FaceScanPage>
     final status = await Permission.camera.request();
     if (!status.isGranted || !mounted) return;
 
-    setState(() => _hasPermission = true);
+    setState(() {
+      _hasPermission = true;
+      _cameraReady = true;
+      _hasReceivedCameraFrame = false;
+    });
 
     // 等待路由切换动画完成（默认 ~300ms），再创建 PlatformView
-    await Future.delayed(const Duration(milliseconds: 350));
-    if (!mounted) return;
-
-    setState(() => _cameraReady = true);
-
     // 再等一帧，让 PlatformView 完成首次 layout 后再启动 CameraX / 检测
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -238,9 +254,9 @@ class _FaceScanPageState extends State<FaceScanPage>
 
   void _handleFaceStatusPayload(Map<String, dynamic> payload) {
     if (!mounted) return;
+    final imageSize = _extractImageSize(payload);
     final hasFace = _extractHasFace(payload);
     final landmarks = _extractNormalizedLandmarks(payload['landmarks']);
-    final imageSize = _extractImageSize(payload);
     final generationId = _extractInt(payload['generationId']);
     final timestampMs = _extractInt(payload['timestampMs']);
     final eventBackCamera = _extractBool(payload['isBackCamera']);
@@ -264,6 +280,11 @@ class _FaceScanPageState extends State<FaceScanPage>
       _pauseAutoScanUntilReset = false;
     }
     setState(() {
+      _hasReceivedCameraFrame =
+          _hasReceivedCameraFrame ||
+          imageSize != Size.zero ||
+          landmarks.isNotEmpty ||
+          hasFace;
       _hasFaceDetected = hasFace;
       _normalizedLandmarks = landmarks;
       _sourceImageSize = imageSize;
@@ -375,6 +396,9 @@ class _FaceScanPageState extends State<FaceScanPage>
     if (!mounted) return;
     setState(() {
       _isScanning = false;
+      if (!_isSubmitting) {
+        _submitStage = FaceSubmitStage.idle;
+      }
     });
   }
 
@@ -415,6 +439,7 @@ class _FaceScanPageState extends State<FaceScanPage>
 
     setState(() {
       _isSubmitting = true;
+      _submitStage = FaceSubmitStage.capturing;
     });
 
     try {
@@ -439,6 +464,9 @@ class _FaceScanPageState extends State<FaceScanPage>
         return;
       }
 
+      setState(() {
+        _submitStage = FaceSubmitStage.processing;
+      });
       await _stopMonitoringBeforeFaceUpload();
       final faceFrameUploadPath = await _buildFaceFrameUploadPath(
         capture,
@@ -463,6 +491,7 @@ class _FaceScanPageState extends State<FaceScanPage>
         _clearAcceptedFaceSnapshot();
         setState(() {
           _isSubmitting = false;
+          _submitStage = FaceSubmitStage.idle;
         });
         await _resumeMonitoringAfterFaceUploadFailure();
         if (!mounted) {
@@ -489,6 +518,9 @@ class _FaceScanPageState extends State<FaceScanPage>
         '${describeScanUploadTenantContext(uploadTenantContext)}',
       );
 
+      setState(() {
+        _submitStage = FaceSubmitStage.uploading;
+      });
       final faceUpload = await _scanRemoteSource.uploadFace(
         faceFilePath: capture.croppedPath,
         faceFrameFilePath: faceFrameUploadPath,
@@ -502,6 +534,9 @@ class _FaceScanPageState extends State<FaceScanPage>
         return;
       }
 
+      setState(() {
+        _submitStage = FaceSubmitStage.analyzing;
+      });
       if (!faceUpload.hasSingleFace) {
         final message = faceUpload.faceNum > 1
             ? '检测到多张人脸，请重新扫描。'
@@ -511,6 +546,7 @@ class _FaceScanPageState extends State<FaceScanPage>
         _clearAcceptedFaceSnapshot();
         setState(() {
           _isSubmitting = false;
+          _submitStage = FaceSubmitStage.idle;
         });
         await _resumeMonitoringAfterFaceUploadFailure();
         if (!mounted) {
@@ -526,6 +562,9 @@ class _FaceScanPageState extends State<FaceScanPage>
       if (!mounted) {
         return;
       }
+      setState(() {
+        _submitStage = FaceSubmitStage.idle;
+      });
       await _navigateToTongueScan();
     } on Object catch (error, stackTrace) {
       AppLogger.log('Face scan submission failed: $error\n$stackTrace');
@@ -537,6 +576,7 @@ class _FaceScanPageState extends State<FaceScanPage>
       _clearAcceptedFaceSnapshot();
       setState(() {
         _isSubmitting = false;
+        _submitStage = FaceSubmitStage.idle;
       });
       await _resumeMonitoringAfterFaceUploadFailure();
       if (!mounted) {
@@ -915,6 +955,38 @@ class _FaceScanPageState extends State<FaceScanPage>
                       ),
               ),
             ),
+            if (_cameraReady && !_hasReceivedCameraFrame)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A1A).withValues(alpha: 0.72),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 34,
+                          height: 34,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.6,
+                            color: _kGreenLight.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '相机准备中',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             if (defaultTargetPlatform == TargetPlatform.android &&
                 _normalizedLandmarks.isNotEmpty)
               Positioned.fill(
@@ -1154,12 +1226,40 @@ class _FaceScanPageState extends State<FaceScanPage>
     return landmarks is List && landmarks.isNotEmpty;
   }
 
+  bool get _faceTooFar {
+    final normalizedBounds = normalizedBoundingRect(_normalizedLandmarks);
+    if (normalizedBounds == null) {
+      return false;
+    }
+    final minArea = defaultTargetPlatform == TargetPlatform.iOS
+        ? _kFaceIosStrictMinArea
+        : _kFaceStrictMinArea;
+    return normalizedRectArea(normalizedBounds) < minArea;
+  }
+
+  bool get _faceTooClose {
+    final normalizedBounds = normalizedBoundingRect(_normalizedLandmarks);
+    if (normalizedBounds == null) {
+      return false;
+    }
+    final maxArea = defaultTargetPlatform == TargetPlatform.iOS
+        ? _kFaceIosStrictMaxArea
+        : _kFaceStrictMaxArea;
+    return normalizedRectArea(normalizedBounds) > maxArea;
+  }
+
   /// 根据鼻尖点（index 4）相对于归一化中心 (0.5, 0.5) 的偏移，返回方向提示文字。
   /// 已居中时返回空字符串。
   String _computeFaceDirection(List<Offset> landmarks) {
     if (landmarks.length <= 4) return '';
     final l10n = context.l10n;
     // MediaPipe FaceMesh 鼻尖点 index = 4（0-based）
+    if (_faceTooFar) {
+      return '请靠近一点';
+    }
+    if (_faceTooClose) {
+      return '请稍远一点';
+    }
     final nose = landmarks[4];
     const threshold = 0.12; // 超过 12% 中心偏移才提示
     final dx = nose.dx - 0.5; // 正 = 右，负 = 左
@@ -1264,8 +1364,12 @@ class _FaceScanPageState extends State<FaceScanPage>
         viewportBounds != null &&
         isNormalizedBoundsInsideGuide(
           bounds: viewportBounds,
-          guideRect: _faceGuideRectOnViewport,
-          guideInsetFactor: _kFaceStrictGuideInsetFactor,
+          guideRect: expandFaceGuideRect(
+            _faceGuideRectOnViewport,
+            overflowFactor: defaultTargetPlatform == TargetPlatform.iOS
+                ? _kFaceIosStrictGuideOverflowFactor
+                : _kFaceStrictGuideOverflowFactor,
+          ),
         );
     final blockers = <String>[
       if (!_hasFaceDetected) 'face_missing',
@@ -1274,8 +1378,8 @@ class _FaceScanPageState extends State<FaceScanPage>
       if (_cameraViewportSize == Size.zero) 'viewport_missing',
       if (_liveAcceptedFaceSnapshot == null) 'accepted_snapshot_missing',
       if (viewportBounds == null) 'viewport_bounds_missing',
-      if (normalizedBounds != null && area < _kFaceStrictMinArea) 'too_small',
-      if (normalizedBounds != null && area > _kFaceStrictMaxArea) 'too_large',
+      if (_faceTooFar) 'too_small',
+      if (_faceTooClose) 'too_large',
       if (viewportBounds != null && !strictInsideGuide) 'framing_failed',
       if (_pauseAutoScanUntilReset) 'paused_after_failure',
       if (_isTransitioning) 'transitioning',

@@ -299,6 +299,33 @@ void main() {
       );
     });
 
+    test('accepts ios tongue geometry with standard-level support again', () {
+      expect(
+        TongueProtrusionProxy.isFrameEligible(
+          mouthLandmarks: const [
+            Offset(0.50, 0.40),
+            Offset(0.50, 0.50),
+            Offset(0.50, 0.62),
+            Offset(0.34, 0.50),
+            Offset(0.66, 0.50),
+            Offset(0.38, 0.54),
+            Offset(0.62, 0.54),
+            Offset(0.70, 0.48),
+          ],
+          mouthCenter: const Offset(0.50, 0.50),
+          faceLandmarks: const [
+            Offset(0.20, 0.20),
+            Offset(0.80, 0.20),
+            Offset(0.20, 0.80),
+            Offset(0.80, 0.80),
+          ],
+          blendshapes: const {'jawOpen': 0.14, 'mouthFunnel': 0.08},
+          tuning: TongueDetectionTuning.ios,
+        ),
+        isTrue,
+      );
+    });
+
     test('rejects isolated tongueOut signal when mouth is barely open', () {
       expect(
         TongueProtrusionProxy.isFrameEligible(

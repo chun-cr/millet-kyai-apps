@@ -291,6 +291,14 @@ void main() {
   group('isFaceFramedForUploadBounds', () {
     const guideRect = Rect.fromLTWH(0.18, 0.10, 0.64, 0.78);
 
+    test('expandFaceGuideRect adds tolerant overflow around the frame', () {
+      final expanded = expandFaceGuideRect(guideRect, overflowFactor: 0.1);
+      expect(expanded.left, closeTo(0.116, 0.0001));
+      expect(expanded.top, closeTo(0.036, 0.0001));
+      expect(expanded.right, closeTo(0.884, 0.0001));
+      expect(expanded.bottom, closeTo(0.944, 0.0001));
+    });
+
     test('accepts a moderately close face under strict framing', () {
       const bounds = Rect.fromLTRB(0.20, 0.12, 0.80, 0.86);
 
@@ -319,14 +327,28 @@ void main() {
       );
     });
 
-    test('still rejects an obviously too-close face under strict framing', () {
-      const bounds = Rect.fromLTRB(0.18, 0.10, 0.82, 0.88);
+    test('accepts a smaller but fully framed face under strict framing', () {
+      const bounds = Rect.fromLTRB(0.25, 0.18, 0.75, 0.80);
 
       expect(
         isFaceFramedForUploadBounds(
           bounds: bounds,
           guideRect: guideRect,
-          area: 0.54,
+          area: 0.31,
+          allowHoldDrift: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('still rejects an obviously too-close face under strict framing', () {
+      const bounds = Rect.fromLTRB(0.10, 0.02, 0.90, 0.96);
+
+      expect(
+        isFaceFramedForUploadBounds(
+          bounds: bounds,
+          guideRect: guideRect,
+          area: 0.75,
           allowHoldDrift: false,
         ),
         isFalse,
@@ -334,13 +356,13 @@ void main() {
     });
 
     test('allows the same closer face on iOS under strict framing', () {
-      const bounds = Rect.fromLTRB(0.18, 0.10, 0.82, 0.88);
+      const bounds = Rect.fromLTRB(0.17, 0.08, 0.83, 0.90);
 
       expect(
         isFaceFramedForUploadBounds(
           bounds: bounds,
           guideRect: guideRect,
-          area: 0.54,
+          area: 0.59,
           allowHoldDrift: false,
           platform: TargetPlatform.iOS,
         ),
@@ -363,13 +385,13 @@ void main() {
     });
 
     test('still rejects an obviously too-close face under relaxed framing', () {
-      const bounds = Rect.fromLTRB(0.18, 0.10, 0.82, 0.89);
+      const bounds = Rect.fromLTRB(0.08, 0.01, 0.92, 0.98);
 
       expect(
         isFaceFramedForUploadBounds(
           bounds: bounds,
           guideRect: guideRect,
-          area: 0.56,
+          area: 0.82,
           allowHoldDrift: true,
         ),
         isFalse,

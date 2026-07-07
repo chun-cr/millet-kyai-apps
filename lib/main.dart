@@ -1,5 +1,7 @@
 // 应用启动入口。这里负责初始化依赖、恢复本地状态，并挂载带路由和国际化能力的根组件。
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:millet_kyai_apps/l10n/app_localizations.dart';
 
 import 'core/layout/app_layout.dart';
+import 'core/error/app_error_handling.dart';
 import 'core/l10n/l10n.dart';
 import 'core/l10n/locale_controller.dart';
 import 'core/di/injector.dart';
@@ -16,6 +19,7 @@ import 'core/router/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  installGlobalErrorHandling();
 
   // 状态栏透明
   SystemChrome.setSystemUIOverlayStyle(
@@ -29,7 +33,9 @@ void main() async {
   initInjector();
   setPreviewAuthenticated(await getIt<AuthSessionStore>().hasSession());
 
-  runApp(const ProviderScope(child: MyApp()));
+  runZonedGuarded(() {
+    runApp(const ProviderScope(child: MyApp()));
+  }, reportZoneError);
 }
 
 class MyApp extends ConsumerWidget {

@@ -3,16 +3,20 @@ part of '../face_scan_page.dart';
 // ── 颜色系（与 scan_guide_page 绿色体系一致）
 const _kGreen = Color(0xFF2D6A4F);
 const _kGreenLight = Color(0xFF3DAB78);
-const _kFaceStrictMinArea = 0.04;
-const _kFaceStrictMaxArea = 0.52;
-const _kFaceStrictGuideInsetFactor = 0.0;
-const _kFaceIosStrictMinArea = 0.032;
-const _kFaceIosStrictMaxArea = 0.58;
-const _kFaceRelaxedMinArea = 0.03;
-const _kFaceRelaxedMaxArea = 0.54;
-const _kFaceRelaxedGuideInsetFactor = 0.0;
-const _kFaceIosRelaxedMinArea = 0.025;
-const _kFaceIosRelaxedMaxArea = 0.60;
+const _kFaceStrictMinArea = 0.026;
+const _kFaceStrictMaxArea = 0.70;
+const _kFaceStrictGuideOverflowFactor = 0.08;
+const _kFaceIosStrictMinArea = 0.024;
+const _kFaceIosStrictMaxArea = 0.74;
+const _kFaceIosStrictGuideOverflowFactor = 0.10;
+const _kFaceRelaxedMinArea = 0.022;
+const _kFaceRelaxedMaxArea = 0.76;
+const _kFaceRelaxedGuideOverflowFactor = 0.12;
+const _kFaceIosRelaxedMinArea = 0.020;
+const _kFaceIosRelaxedMaxArea = 0.80;
+const _kFaceIosRelaxedGuideOverflowFactor = 0.14;
+
+enum FaceSubmitStage { idle, capturing, processing, uploading, analyzing }
 
 @visibleForTesting
 const Duration faceScanHoldDuration = Duration(milliseconds: 800);
@@ -132,17 +136,42 @@ bool isFaceFramedForUploadBounds({
   final maxArea = allowHoldDrift
       ? (isIos ? _kFaceIosRelaxedMaxArea : _kFaceRelaxedMaxArea)
       : (isIos ? _kFaceIosStrictMaxArea : _kFaceStrictMaxArea);
-  final guideInsetFactor = allowHoldDrift
-      ? _kFaceRelaxedGuideInsetFactor
-      : _kFaceStrictGuideInsetFactor;
+  final guideOverflowFactor = allowHoldDrift
+      ? (isIos
+            ? _kFaceIosRelaxedGuideOverflowFactor
+            : _kFaceRelaxedGuideOverflowFactor)
+      : (isIos
+            ? _kFaceIosStrictGuideOverflowFactor
+            : _kFaceStrictGuideOverflowFactor);
+  final tolerantGuideRect = expandFaceGuideRect(
+    guideRect,
+    overflowFactor: guideOverflowFactor,
+  );
 
   return area >= minArea &&
       area <= maxArea &&
       isNormalizedBoundsInsideGuide(
         bounds: bounds,
-        guideRect: guideRect,
-        guideInsetFactor: guideInsetFactor,
+        guideRect: tolerantGuideRect,
       );
+}
+
+@visibleForTesting
+Rect expandFaceGuideRect(Rect guideRect, {required double overflowFactor}) {
+  if (guideRect == Rect.zero || guideRect.isEmpty) {
+    return Rect.zero;
+  }
+
+  final shortestSide = guideRect.width < guideRect.height
+      ? guideRect.width
+      : guideRect.height;
+  final padding = shortestSide * overflowFactor.clamp(0.0, 1.0).toDouble();
+  return Rect.fromLTRB(
+    guideRect.left - padding,
+    guideRect.top - padding,
+    guideRect.right + padding,
+    guideRect.bottom + padding,
+  );
 }
 
 @visibleForTesting
