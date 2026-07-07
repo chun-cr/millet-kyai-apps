@@ -16,7 +16,6 @@
 		1A0000060000000000000001 /* GestureRecognizerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000160000000000000001 /* GestureRecognizerService.swift */; };
 		1A0000070000000000000001 /* TongueDetectionEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000170000000000000001 /* TongueDetectionEvaluator.swift */; };
 		1A0000080000000000000001 /* gesture_recognizer.task in Resources */ = {isa = PBXBuildFile; fileRef = 1A0000180000000000000001 /* gesture_recognizer.task */; };
-		1A0000090000000000000001 /* AuthSessionSecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000190000000000000001 /* AuthSessionSecureStore.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
@@ -62,7 +61,6 @@
 		1A0000160000000000000001 /* GestureRecognizerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizerService.swift; sourceTree = "<group>"; };
 		1A0000170000000000000001 /* TongueDetectionEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TongueDetectionEvaluator.swift; sourceTree = "<group>"; };
 		1A0000180000000000000001 /* gesture_recognizer.task */ = {isa = PBXFileReference; lastKnownFileType = file; name = gesture_recognizer.task; path = ../../assets/models/gesture_recognizer.task; sourceTree = "<group>"; };
-		1A0000190000000000000001 /* AuthSessionSecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionSecureStore.swift; sourceTree = "<group>"; };
 		1F52614ACFB0229BF4002A28 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		24939A12F49AC5046BA5FEB7 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		2532C0C1E46E62B93245BA62 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -168,7 +166,6 @@
 				1A0000160000000000000001 /* GestureRecognizerService.swift */,
 				1A0000150000000000000001 /* ModelAssetLocator.swift */,
 				1A0000170000000000000001 /* TongueDetectionEvaluator.swift */,
-				1A0000190000000000000001 /* AuthSessionSecureStore.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
@@ -417,7 +414,6 @@
 				1A0000060000000000000001 /* GestureRecognizerService.swift in Sources */,
 				1A0000050000000000000001 /* ModelAssetLocator.swift in Sources */,
 				1A0000070000000000000001 /* TongueDetectionEvaluator.swift in Sources */,
-				1A0000090000000000000001 /* AuthSessionSecureStore.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);
