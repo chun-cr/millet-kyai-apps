@@ -25,6 +25,10 @@ class PhysiqueQuestionRequestContext {
     this.medicalCaseId,
     this.name,
     this.phone,
+    this.storeId,
+    this.t,
+    this.tenantId,
+    this.key,
     this.tongueReportId,
     this.topOrgId,
   });
@@ -38,6 +42,10 @@ class PhysiqueQuestionRequestContext {
   final String? name;
   final String? phone;
   final String phyCategory;
+  final int? storeId;
+  final int? t;
+  final int? tenantId;
+  final String? key;
   final int? tongueReportId;
   final int? topOrgId;
 
@@ -57,6 +65,10 @@ class PhysiqueQuestionRequestContext {
       name: name,
       phone: phone,
       phyCategory: phyCategory,
+      storeId: storeId,
+      t: t,
+      tenantId: tenantId,
+      key: key,
       tongueReportId: tongueReportId,
       topOrgId: topOrgId,
     );
@@ -76,6 +88,10 @@ class PhysiqueQuestionRequest {
     this.medicalCaseId,
     this.name,
     this.phone,
+    this.storeId,
+    this.t,
+    this.tenantId,
+    this.key,
     this.tongueReportId,
     this.topOrgId,
   });
@@ -91,6 +107,10 @@ class PhysiqueQuestionRequest {
   final String? name;
   final String? phone;
   final String phyCategory;
+  final int? storeId;
+  final int? t;
+  final int? tenantId;
+  final String? key;
   final int? tongueReportId;
   final int? topOrgId;
 
@@ -108,6 +128,10 @@ class PhysiqueQuestionRequest {
       if (medicalCaseId != null) 'medicalCaseId': medicalCaseId,
       if (_isPresent(name)) 'name': name,
       if (_isPresent(phone)) 'phone': phone,
+      if (storeId != null) 'storeId': storeId,
+      if (t != null) 't': t,
+      if (tenantId != null) 'tenantId': tenantId,
+      if (_isPresent(key)) 'key': key,
       if (tongueReportId != null) 'tongueReportId': tongueReportId,
       if (topOrgId != null) 'topOrgId': topOrgId,
     };
@@ -156,8 +180,12 @@ class PhysiqueQuestionFlowResult {
       reportId: _firstNonEmptyString(<Object?>[
         data['reportId'],
         _readPath(data, 'report.reportId'),
+        _readPath(data, 'report.id'),
         _readPath(data, 'tongueReport.reportId'),
         _readPath(data, 'result.reportId'),
+        _readPath(data, 'diagnosisReport.reportId'),
+        _readPath(data, 'diagnosisReport.id'),
+        _readPath(data, 'medicalCase.reportId'),
       ]),
     );
   }
@@ -183,7 +211,7 @@ class PhysiqueQuestionPayload {
 
   factory PhysiqueQuestionPayload.fromData(Map<String, dynamic> data) {
     final questionMap = _resolveQuestionMap(data);
-    final optionMaps = _resolveOptionMaps(questionMap);
+    final optionMaps = _resolveOptionMaps(questionMap, data);
     return PhysiqueQuestionPayload(
       raw: questionMap,
       id: _firstInt(<Object?>[
@@ -192,6 +220,7 @@ class PhysiqueQuestionPayload {
         questionMap['subjectId'],
       ]),
       title: _firstNonEmptyString(<Object?>[
+        questionMap['question'],
         questionMap['title'],
         questionMap['questionTitle'],
         questionMap['questionText'],
@@ -216,6 +245,7 @@ class PhysiqueQuestionPayload {
         questionMap['currentIndex'],
         questionMap['questionIndex'],
         data['currentIndex'],
+        data['questionTotal'],
         data['index'],
       ]),
       totalCount: _firstInt(<Object?>[
@@ -270,6 +300,7 @@ class PhysiqueQuestionOption {
       ]),
       label: _firstNonEmptyString(<Object?>[
         json['optionName'],
+        json['text'],
         json['label'],
         json['name'],
         json['title'],
@@ -296,6 +327,7 @@ bool _isPresent(String? value) => value != null && value.trim().isNotEmpty;
 Map<String, dynamic> _resolveQuestionMap(Map<String, dynamic> data) {
   final nested = <Object?>[
     data['question'],
+    data['next'],
     data['currentQuestion'],
     data['nextQuestion'],
     data['item'],
@@ -311,12 +343,17 @@ Map<String, dynamic> _resolveQuestionMap(Map<String, dynamic> data) {
 
 List<Map<String, dynamic>> _resolveOptionMaps(
   Map<String, dynamic> questionMap,
+  Map<String, dynamic> data,
 ) {
   final values = <Object?>[
     questionMap['options'],
     questionMap['optionList'],
     questionMap['questionOptions'],
     questionMap['items'],
+    data['options'],
+    data['optionList'],
+    data['questionOptions'],
+    data['items'],
   ];
   for (final value in values) {
     final list = _asListOfMaps(value);

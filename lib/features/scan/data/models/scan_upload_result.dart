@@ -45,30 +45,72 @@ class ScanTongueUploadResult {
   String get imageUrl => _asString(data['imageUrl']);
 
   Map<String, dynamic> get analysisResult => _asMap(data['analysisResult']);
+  Map<String, dynamic> get diagnosisReport => _asMap(data['diagnosisReport']);
+  Map<String, dynamic> get medicalCase => _asMap(data['medicalCase']);
+  Map<String, dynamic> get report => _asMap(data['report']);
+  Map<String, dynamic> get result => _asMap(data['result']);
   Map<String, dynamic> get tongueReport => _asMap(data['tongueReport']);
 
   String get reportId => _firstNonEmptyString(<Object?>[
-    tongueReport['reportId'],
     data['reportId'],
     analysisResult['reportId'],
-    tongueReport['id'],
+    tongueReport['reportId'],
+    report['reportId'],
+    report['id'],
+    result['reportId'],
+    diagnosisReport['reportId'],
+    diagnosisReport['id'],
+    medicalCase['reportId'],
     data['id'],
   ]);
   int? get tongueReportId => _firstInt(<Object?>[
+    data['tongueReportId'],
     tongueReport['tongueReportId'],
     tongueReport['id'],
-    data['tongueReportId'],
+    analysisResult['tongueReportId'],
+    report['tongueReportId'],
+    result['tongueReportId'],
+    diagnosisReport['tongueReportId'],
+    medicalCase['tongueReportId'],
   ]);
   int? get medicalCaseId => _firstInt(<Object?>[
     data['medicalCaseId'],
     tongueReport['medicalCaseId'],
     analysisResult['medicalCaseId'],
+    report['medicalCaseId'],
+    result['medicalCaseId'],
+    diagnosisReport['medicalCaseId'],
+    medicalCase['medicalCaseId'],
+    medicalCase['id'],
+  ]);
+  int? get nextQuestionT => _firstInt(<Object?>[
+    data['t'],
+    tongueReport['t'],
+    analysisResult['t'],
+    report['t'],
+    result['t'],
+  ]);
+  String get nextQuestionKey => _firstNonEmptyString(<Object?>[
+    data['key'],
+    tongueReport['key'],
+    analysisResult['key'],
+    report['key'],
+    result['key'],
   ]);
   String get phyCategory => _firstNonEmptyString(<Object?>[
     data['phyCategory'],
     tongueReport['phyCategory'],
     analysisResult['phyCategory'],
+    report['phyCategory'],
+    result['phyCategory'],
   ]);
+
+  bool get hasContinuationContext =>
+      reportId.isNotEmpty ||
+      tongueReportId != null ||
+      medicalCaseId != null ||
+      nextQuestionKey.isNotEmpty ||
+      phyCategory.isNotEmpty;
 
   bool get missingTongue {
     return analysisResult['success'] == true &&

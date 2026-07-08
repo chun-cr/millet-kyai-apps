@@ -529,7 +529,7 @@
   "reportTabTherapy": "调理",
   "reportTabAdvice": "建议",
   "reportHeaderCollapsedTitle": "AI 健康报告",
-  "reportHeroMeta": "2025.03.14  ·  AI 四诊合参",
+  "reportHeroMeta": "2025.03.14",
   "reportHeroTitle": "{name}的健康报告",
   "@reportHeroTitle": {
     "placeholders": {
@@ -568,7 +568,7 @@
   "reportOverviewModuleSeasonalTitle": "四季保养",
   "reportOverviewModuleSeasonalSubtitle": "顺时养生",
   "reportOverviewModuleNavTitle": "模块导航",
-  "reportOverviewScanMetaDisclaimer": "本报告由 AI 四诊合参生成，仅供健康参考，不构成医疗诊断。如有不适请咨询专业医师。",
+  "reportOverviewScanMetaDisclaimer": "本报告由面部、舌象、手掌三项采集结果生成，仅供健康参考，不构成医疗诊断。如有不适请咨询专业医师。",
   "reportConstitutionDetailTitle": "体质详解",
   "reportConstitutionCoreConclusionLabel": "核心结论",
   "reportConstitutionCoreConclusionValue": "主导偏颇体质：气虚质",

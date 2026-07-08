@@ -14,7 +14,7 @@ class PhysiqueQuestionRemoteSource {
   Future<PhysiqueQuestionEnvelope> fetchNextQuestion(
     PhysiqueQuestionRequest request,
   ) async {
-    const path = '/api/v1/saas/mobile/physique/question/next';
+    const path = '/api/v1/saas/physiques/next-question';
     try {
       final response = await _dioClient.dio.post<dynamic>(
         path,

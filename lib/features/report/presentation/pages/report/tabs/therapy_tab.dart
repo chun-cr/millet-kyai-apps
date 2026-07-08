@@ -112,7 +112,6 @@ class _Tab3TherapyState extends State<_Tab3Therapy> {
             context,
             baseViewData.copyWith(
               isLoading: true,
-              sourceLabel: '加载 point',
               statusText: '正在读取当前体质对应的取穴数据...',
             ),
           );
@@ -121,10 +120,7 @@ class _Tab3TherapyState extends State<_Tab3Therapy> {
         if (snapshot.hasError) {
           return _buildAcupuncturePointsCard(
             context,
-            baseViewData.copyWith(
-              sourceLabel: '本地兜底',
-              statusText: 'point 暂未加载成功，先展示基础取穴建议。',
-            ),
+            baseViewData.copyWith(statusText: '取穴数据暂未加载成功，先展示基础取穴建议。'),
           );
         }
 
@@ -152,8 +148,6 @@ class _Tab3TherapyState extends State<_Tab3Therapy> {
             scorePercent: viewData.scorePercent,
             intro: viewData.intro,
             pointCount: viewData.points.length,
-            sourceLabel: viewData.sourceLabel,
-            isLoading: viewData.isLoading,
           ),
           if (viewData.statusText != null) ...[
             const SizedBox(height: 10),

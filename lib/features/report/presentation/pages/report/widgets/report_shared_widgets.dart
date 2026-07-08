@@ -111,6 +111,69 @@ class _FloatingSectionTitle extends StatelessWidget {
   }
 }
 
+String? _nonEmpty(String? value) {
+  final normalized = value?.trim();
+  if (normalized == null || normalized.isEmpty) {
+    return null;
+  }
+  return normalized;
+}
+
+Object? _valueForKey(Map<String, dynamic> payload, String key) {
+  if (payload.containsKey(key)) {
+    return payload[key];
+  }
+  final normalizedKey = key.toLowerCase();
+  for (final entry in payload.entries) {
+    if (entry.key.toLowerCase() == normalizedKey) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
+String? _firstNonEmptyText(Map<String, dynamic> payload, List<String> keys) {
+  for (final key in keys) {
+    final value = _valueForKey(payload, key);
+    if (value is String) {
+      final normalized = _nonEmpty(value);
+      if (normalized != null) {
+        return normalized;
+      }
+    } else if (value is num || value is bool) {
+      return value.toString();
+    }
+  }
+  return null;
+}
+
+class _SmallBadge extends StatelessWidget {
+  const _SmallBadge({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.14), width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color.withValues(alpha: 0.9),
+        ),
+      ),
+    );
+  }
+}
+
 class _SeasonalFocusBanner extends StatelessWidget {
   final String title;
   final String tag;

@@ -907,6 +907,7 @@ void main() {
     expect(find.text('太冲'), findsOneWidget);
     expect(find.text('内关'), findsOneWidget);
     expect(find.text('point 接口'), findsNothing);
+    expect(find.textContaining('point', skipOffstage: false), findsNothing);
     expect(find.text('每日按揉太冲、内关各 3-5 分钟，配合深呼吸放松。'), findsOneWidget);
     expect(find.textContaining('以酸胀为度', skipOffstage: false), findsWidgets);
     expect(find.textContaining('结合当前体质偏向'), findsNothing);

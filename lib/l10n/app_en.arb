@@ -535,7 +535,7 @@
   "reportTabTherapy": "Therapy",
   "reportTabAdvice": "Advice",
   "reportHeaderCollapsedTitle": "AI Health Report",
-  "reportHeroMeta": "2025.03.14 · AI Four-Diagnosis Assessment",
+  "reportHeroMeta": "2025.03.14",
   "reportHeroTitle": "{name}'s Health Report",
   "@reportHeroTitle": {
     "placeholders": {
@@ -574,7 +574,7 @@
   "reportOverviewModuleSeasonalTitle": "Seasonal Care",
   "reportOverviewModuleSeasonalSubtitle": "Nourish with the seasons",
   "reportOverviewModuleNavTitle": "Module Navigation",
-  "reportOverviewScanMetaDisclaimer": "This report is generated through AI Four-Diagnosis Assessment and is for wellness reference only. It does not constitute a medical diagnosis. Please consult a qualified physician if needed.",
+  "reportOverviewScanMetaDisclaimer": "This report is generated from face, tongue, and palm scan results and is for wellness reference only. It does not constitute a medical diagnosis. Please consult a qualified physician if needed.",
   "reportConstitutionDetailTitle": "Constitution Details",
   "reportConstitutionCoreConclusionLabel": "Key Finding",
   "reportConstitutionCoreConclusionValue": "Primary constitutional tendency: Qi Deficiency",

@@ -20,6 +20,8 @@ class ScanSession {
   String get detectedGender => _faceUpload?.sex?.toString().trim() ?? '';
   int? get tongueReportId => _tongueUpload?.tongueReportId;
   int? get medicalCaseId => _tongueUpload?.medicalCaseId;
+  int? get nextQuestionT => _tongueUpload?.nextQuestionT;
+  String get nextQuestionKey => _tongueUpload?.nextQuestionKey.trim() ?? '';
   String get phyCategory => _tongueUpload?.phyCategory.trim() ?? '';
 
   void reset() {

@@ -10,7 +10,6 @@ import '../../../../core/di/injector.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/logger.dart';
-import '../../data/sources/scan_remote_source.dart';
 import '../../../../features/profile/domain/entities/profile_me_entity.dart';
 import '../../../../features/profile/presentation/providers/profile_repository_provider.dart';
 import '../../../../features/share/domain/entities/app_id_mapping_entity.dart';
@@ -20,6 +19,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/models/physique_question_models.dart';
 import '../../data/models/scan_session.dart';
 import '../../data/sources/physique_question_remote_source.dart';
+import '../utils/scan_upload_tenant_context.dart';
 
 part 'physique_question_widgets.dart';
 
@@ -28,7 +28,7 @@ const _kQuestionPrimary = Color(0xFF2D6A4F);
 const _kQuestionPrimaryLight = Color(0xFF3DAB78);
 const _kDefaultPhysiqueQuestionCategory = String.fromEnvironment(
   'PHYSIQUE_QUESTION_CATEGORY',
-  defaultValue: ScanSession.reportSource,
+  defaultValue: 'tzpd',
 );
 
 typedef ProfileLoader = Future<ProfileMeEntity?> Function(BuildContext context);
@@ -107,10 +107,6 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       if (!mounted) {
         return;
       }
-      if (_shouldSkipQuestionnaireOn404(error)) {
-        await _navigateToReport(_scanSession.reportId);
-        return;
-      }
       setState(() {
         _error = error;
         _isLoading = false;
@@ -121,6 +117,7 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
   Future<PhysiqueQuestionRequestContext> _buildRequestContext() async {
     final profile = await _loadProfile();
     final appIdMapping = await _loadAppIdMapping();
+    final tenantContext = resolveScanUploadTenantContext(appIdMapping);
 
     final detectedGender = _scanSession.detectedGender;
     final resolvedGender = _resolveGender(profile?.gender, detectedGender);
@@ -135,22 +132,18 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
 
     return PhysiqueQuestionRequestContext(
       age: _scanSession.detectedAge,
-      clinicId: _resolveOptionalInt(<String>[
-        appIdMapping?.clinicId ?? '',
-        appIdMapping?.defaultClinicId ?? '',
-        appIdMapping?.storeId ?? '',
-        appIdMapping?.defaultStoreId ?? '',
-      ]),
+      clinicId: tenantContext.clinicId,
       gender: resolvedGender,
       medicalCaseId: _scanSession.medicalCaseId,
       name: _resolveName(profile),
       phone: _resolvePhone(profile),
       phyCategory: resolvedPhysiqueCategory,
+      storeId: tenantContext.storeId,
+      t: _scanSession.nextQuestionT,
+      tenantId: tenantContext.tenantId,
+      key: _scanSession.nextQuestionKey,
       tongueReportId: _scanSession.tongueReportId,
-      topOrgId: _resolveOptionalInt(<String>[
-        appIdMapping?.topOrgId ?? '',
-        appIdMapping?.tenantId ?? '',
-      ]),
+      topOrgId: tenantContext.topOrgId,
     );
   }
 
@@ -261,16 +254,6 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
-  int? _resolveOptionalInt(List<String> values) {
-    for (final value in values) {
-      final parsed = int.tryParse(value.trim());
-      if (parsed != null) {
-        return parsed;
-      }
-    }
-    return null;
-  }
-
   Future<void> _requestNextQuestion({
     required List<PhysiqueQuestionRequestAnswer> nextAnswers,
     required String? amenorrhea,
@@ -330,10 +313,6 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     } on Object catch (error, stackTrace) {
       AppLogger.log('Physique question request failed: $error\n$stackTrace');
       if (!mounted) {
-        return;
-      }
-      if (_shouldSkipQuestionnaireOn404(error)) {
-        await _navigateToReport(_scanSession.reportId);
         return;
       }
       setState(() {
@@ -425,13 +404,6 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       return l10n.scanQuestionLoadFailed;
     }
     return message;
-  }
-
-  bool _shouldSkipQuestionnaireOn404(Object error) {
-    if (error is ScanUploadException) {
-      return error.statusCode == 404 || error.businessCode == 404;
-    }
-    return false;
   }
 
   bool get _hasSelection => _selectedOptionValue != null;

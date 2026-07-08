@@ -317,7 +317,7 @@
   "reportTabTherapy": "케어",
   "reportTabAdvice": "추천",
   "reportHeaderCollapsedTitle": "AI 건강 리포트",
-  "reportHeroMeta": "2025.03.14 · AI 사진 평가",
+  "reportHeroMeta": "2025.03.14",
   "reportHeroTitle": "{name}님의 건강 리포트",
   "@reportHeroTitle": {
     "placeholders": {
@@ -356,7 +356,7 @@
   "reportOverviewModuleSeasonalTitle": "사계절 양생",
   "reportOverviewModuleSeasonalSubtitle": "계절에 맞춘 양생",
   "reportOverviewModuleNavTitle": "기능 안내",
-  "reportOverviewScanMetaDisclaimer": "본 리포트는 AI 사진 평가를 기반으로 한 건강 참고 정보이며 의료 진단이 아닙니다. 필요 시 전문의와 상담해 주세요.",
+  "reportOverviewScanMetaDisclaimer": "본 리포트는 얼굴, 혀, 손바닥 스캔 결과를 기반으로 한 건강 참고 정보이며 의료 진단이 아닙니다. 필요 시 전문의와 상담해 주세요.",
   "reportConstitutionDetailTitle": "체질 상세",
   "reportConstitutionCoreConclusionLabel": "핵심 소견",
   "reportConstitutionCoreConclusionValue": "주된 체질 경향: 기허질",

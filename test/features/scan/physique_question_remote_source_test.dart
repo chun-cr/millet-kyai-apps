@@ -70,6 +70,10 @@ void main() {
           phyCategory: 'PHY-TEST',
           age: 28,
           clinicId: 3,
+          key: 'question-key',
+          storeId: 3,
+          t: 123,
+          tenantId: 8,
           topOrgId: 8,
           tongueReportId: 33,
           medicalCaseId: 44,
@@ -82,13 +86,17 @@ void main() {
       expect(adapter.requests, hasLength(1));
       expect(
         adapter.requests.single.path,
-        '/api/v1/saas/mobile/physique/question/next',
+        '/api/v1/saas/physiques/next-question',
       );
       expect(adapter.requests.single.data, <String, dynamic>{
         'gender': 'F',
         'phyCategory': 'PHY-TEST',
         'age': 28,
         'clinicId': 3,
+        'key': 'question-key',
+        'storeId': 3,
+        't': 123,
+        'tenantId': 8,
         'topOrgId': 8,
         'tongueReportId': 33,
         'medicalCaseId': 44,

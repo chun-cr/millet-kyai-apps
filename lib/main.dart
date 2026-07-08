@@ -17,23 +17,23 @@ import 'core/network/auth_session_store.dart';
 import 'core/platform/app_identity.dart';
 import 'core/router/app_router.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  installGlobalErrorHandling();
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    installGlobalErrorHandling();
 
-  // 状态栏透明
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
+    // 状态栏透明
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
 
-  await AppIdentity.initialize();
-  initInjector();
-  setPreviewAuthenticated(await getIt<AuthSessionStore>().hasSession());
+    await AppIdentity.initialize();
+    initInjector();
+    setPreviewAuthenticated(await getIt<AuthSessionStore>().hasSession());
 
-  runZonedGuarded(() {
     runApp(const ProviderScope(child: MyApp()));
   }, reportZoneError);
 }

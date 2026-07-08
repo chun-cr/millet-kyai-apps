@@ -47,6 +47,7 @@ Future<void> _pumpQuestionPage(
   required ScanSession scanSession,
   required PhysiqueQuestionRemoteSource remoteSource,
   required Future<void> Function(String? reportId) onNavigate,
+  String? physiqueCategoryOverride = 'PHY-TEST',
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -61,7 +62,7 @@ Future<void> _pumpQuestionPage(
       home: PhysiqueQuestionPage(
         remoteSource: remoteSource,
         scanSession: scanSession,
-        physiqueCategoryOverride: 'PHY-TEST',
+        physiqueCategoryOverride: physiqueCategoryOverride,
         profileLoader: (_) async => const ProfileMeEntity(
           realName: '测试用户',
           phone: '13800000000',
@@ -137,7 +138,7 @@ void main() {
     expect(navigatedReportId, 'report-123');
   });
 
-  testWidgets('bootstrap 404 skips questionnaire and opens report directly', (
+  testWidgets('bootstrap 404 shows question load error instead of skipping', (
     tester,
   ) async {
     final scanSession = _buildScanSession();
@@ -160,7 +161,46 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(navigatedReportId, 'report-123');
+    expect(navigatedReportId, isNull);
+    expect(find.byKey(const ValueKey('scan_question_error')), findsOneWidget);
+    expect(find.textContaining('Not Found'), findsOneWidget);
+  });
+
+  testWidgets('bootstrap uses miniapp default physique category', (
+    tester,
+  ) async {
+    final scanSession = _buildScanSession();
+    final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+      <PhysiqueQuestionEnvelope>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'question': <String, dynamic>{
+              'id': 11,
+              'title': '最近睡眠怎么样？',
+              'options': <Map<String, String>>[
+                <String, String>{'optionValue': 'good', 'optionName': '挺好'},
+              ],
+            },
+          },
+        ),
+      ],
+    );
+
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (_) async {},
+      physiqueCategoryOverride: null,
+    );
+    await tester.pumpAndSettle();
+
+    expect(remoteSource.requests, hasLength(1));
+    expect(
+      remoteSource.requests.single.toJson(),
+      containsPair('phyCategory', 'tzpd'),
+    );
   });
 
   testWidgets(
@@ -172,12 +212,12 @@ void main() {
           const PhysiqueQuestionEnvelope(
             code: 0,
             data: <String, dynamic>{
-              'question': <String, dynamic>{
+              'next': <String, dynamic>{
                 'id': 11,
-                'title': '最近睡眠怎么样？',
+                'question': '最近睡眠怎么样？',
                 'options': <Map<String, String>>[
-                  <String, String>{'optionValue': 'good', 'optionName': '挺好'},
-                  <String, String>{'optionValue': 'normal', 'optionName': '一般'},
+                  <String, String>{'value': 'good', 'text': '挺好'},
+                  <String, String>{'value': 'normal', 'text': '一般'},
                 ],
                 'currentIndex': 1,
                 'totalCount': 1,
@@ -200,6 +240,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const ValueKey('scan_question_title')), findsOneWidget);
+      expect(find.text('最近睡眠怎么样？'), findsOneWidget);
+      expect(find.text('挺好'), findsOneWidget);
+      expect(find.text('一般'), findsOneWidget);
       expect(remoteSource.requests, hasLength(1));
       expect(remoteSource.requests.first.toJson(), <String, dynamic>{
         'gender': 'F',
@@ -209,6 +253,8 @@ void main() {
         'medicalCaseId': 456,
         'name': '测试用户',
         'phone': '13800000000',
+        'storeId': 200,
+        'tenantId': 100,
         'tongueReportId': 789,
         'topOrgId': 100,
       });
@@ -231,6 +277,8 @@ void main() {
         'medicalCaseId': 456,
         'name': '测试用户',
         'phone': '13800000000',
+        'storeId': 200,
+        'tenantId': 100,
         'tongueReportId': 789,
         'topOrgId': 100,
         'answers': <Map<String, dynamic>>[

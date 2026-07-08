@@ -1355,7 +1355,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportHeaderCollapsedTitle => 'AI Health Report';
 
   @override
-  String get reportHeroMeta => '2025.03.14 · AI Four-Diagnosis Assessment';
+  String get reportHeroMeta => '2025.03.14';
 
   @override
   String reportHeroTitle(String name) {
@@ -1460,7 +1460,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportOverviewScanMetaDisclaimer =>
-      'This report is generated through AI Four-Diagnosis Assessment and is for wellness reference only. It does not constitute a medical diagnosis. Please consult a qualified physician if needed.';
+      'This report is generated from face, tongue, and palm scan results and is for wellness reference only. It does not constitute a medical diagnosis. Please consult a qualified physician if needed.';
 
   @override
   String get reportConstitutionDetailTitle => 'Constitution Details';

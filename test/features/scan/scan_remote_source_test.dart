@@ -308,6 +308,30 @@ void main() {
   );
 
   test(
+    'uploadPalm omits reportId when the tongue stage has not returned one',
+    () async {
+      final file = await createFile('palm-no-report.jpg');
+      final adapter = _QueueHttpClientAdapter(<_StubResponse>[
+        const _StubResponse(200, <String, dynamic>{
+          'code': 0,
+          'data': <String, dynamic>{},
+        }),
+      ]);
+      final source = createSource(adapter);
+
+      await source.uploadPalm(handFilePath: file.path);
+
+      final payload = adapter.requests.single.data as FormData;
+      final fields = Map<String, String>.fromEntries(payload.fields);
+      expect(fields, isNot(contains('reportId')));
+      expect(payload.files.map((entry) => entry.key), <String>[
+        'handFile',
+        'handFrameFile',
+      ]);
+    },
+  );
+
+  test(
     'uploadPalm throws detailed exception for http failure response',
     () async {
       final file = await createFile('palm.jpg');

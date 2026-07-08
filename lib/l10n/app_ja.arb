@@ -317,7 +317,7 @@
   "reportTabTherapy": "ケア",
   "reportTabAdvice": "アドバイス",
   "reportHeaderCollapsedTitle": "AI健康レポート",
-  "reportHeroMeta": "2025.03.14 ・ AI四診評価",
+  "reportHeroMeta": "2025.03.14",
   "reportHeroTitle": "{name}さんの健康レポート",
   "@reportHeroTitle": {
     "placeholders": {
@@ -356,7 +356,7 @@
   "reportOverviewModuleSeasonalTitle": "四季養生",
   "reportOverviewModuleSeasonalSubtitle": "季節に合わせた養生",
   "reportOverviewModuleNavTitle": "機能ガイド",
-  "reportOverviewScanMetaDisclaimer": "本レポートは AI 四診評価に基づく健康参考情報であり、医療診断ではありません。必要に応じて専門医にご相談ください。",
+  "reportOverviewScanMetaDisclaimer": "本レポートは顔・舌・手のひらのスキャン結果に基づく健康参考情報であり、医療診断ではありません。必要に応じて専門医にご相談ください。",
   "reportConstitutionDetailTitle": "体質詳解",
   "reportConstitutionCoreConclusionLabel": "主な所見",
   "reportConstitutionCoreConclusionValue": "主たる体質傾向：気虚質",

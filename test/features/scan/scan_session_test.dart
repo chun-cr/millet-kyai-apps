@@ -50,16 +50,26 @@ void main() {
     },
   );
 
-  test(
-    'tongue upload falls back to tongueReport.id for report id persistence',
-    () {
-      const upload = ScanTongueUploadResult(<String, dynamic>{
-        'tongueReport': <String, dynamic>{'id': 789},
-      });
-      final session = ScanSession()..saveTongueUpload(upload);
+  test('tongue upload keeps tongueReport.id separate from reportId', () {
+    const upload = ScanTongueUploadResult(<String, dynamic>{
+      'tongueReport': <String, dynamic>{'id': 789},
+    });
+    final session = ScanSession()..saveTongueUpload(upload);
 
-      expect(upload.reportId, '789');
-      expect(session.reportId, '789');
-    },
-  );
+    expect(upload.reportId, isEmpty);
+    expect(upload.tongueReportId, 789);
+    expect(session.reportId, isNull);
+  });
+
+  test('tongue upload parses nested report ids for report persistence', () {
+    const upload = ScanTongueUploadResult(<String, dynamic>{
+      'report': <String, dynamic>{'id': 456},
+      'tongueReport': <String, dynamic>{'id': 789},
+    });
+    final session = ScanSession()..saveTongueUpload(upload);
+
+    expect(upload.reportId, '456');
+    expect(upload.tongueReportId, 789);
+    expect(session.reportId, '456');
+  });
 }

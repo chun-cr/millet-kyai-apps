@@ -2571,7 +2571,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportHeroMeta.
   ///
   /// In zh, this message translates to:
-  /// **'2025.03.14  ·  AI 四诊合参'**
+  /// **'2025.03.14'**
   String get reportHeroMeta;
 
   /// No description provided for @reportHeroTitle.
@@ -2763,7 +2763,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportOverviewScanMetaDisclaimer.
   ///
   /// In zh, this message translates to:
-  /// **'本报告由 AI 四诊合参生成，仅供健康参考，不构成医疗诊断。如有不适请咨询专业医师。'**
+  /// **'本报告由面部、舌象、手掌三项采集结果生成，仅供健康参考，不构成医疗诊断。如有不适请咨询专业医师。'**
   String get reportOverviewScanMetaDisclaimer;
 
   /// No description provided for @reportConstitutionDetailTitle.

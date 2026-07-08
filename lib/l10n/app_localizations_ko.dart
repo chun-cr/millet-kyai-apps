@@ -1291,7 +1291,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportHeaderCollapsedTitle => 'AI 건강 리포트';
 
   @override
-  String get reportHeroMeta => '2025.03.14 · AI 사진 평가';
+  String get reportHeroMeta => '2025.03.14';
 
   @override
   String reportHeroTitle(String name) {
@@ -1392,7 +1392,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportOverviewScanMetaDisclaimer =>
-      '본 리포트는 AI 사진 평가를 기반으로 한 건강 참고 정보이며 의료 진단이 아닙니다. 필요 시 전문의와 상담해 주세요.';
+      '본 리포트는 얼굴, 혀, 손바닥 스캔 결과를 기반으로 한 건강 참고 정보이며 의료 진단이 아닙니다. 필요 시 전문의와 상담해 주세요.';
 
   @override
   String get reportConstitutionDetailTitle => '체질 상세';

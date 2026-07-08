@@ -1274,7 +1274,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportHeaderCollapsedTitle => 'AI 健康报告';
 
   @override
-  String get reportHeroMeta => '2025.03.14  ·  AI 四诊合参';
+  String get reportHeroMeta => '2025.03.14';
 
   @override
   String reportHeroTitle(String name) {
@@ -1374,7 +1374,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reportOverviewScanMetaDisclaimer =>
-      '本报告由 AI 四诊合参生成，仅供健康参考，不构成医疗诊断。如有不适请咨询专业医师。';
+      '本报告由面部、舌象、手掌三项采集结果生成，仅供健康参考，不构成医疗诊断。如有不适请咨询专业医师。';
 
   @override
   String get reportConstitutionDetailTitle => '体质详解';

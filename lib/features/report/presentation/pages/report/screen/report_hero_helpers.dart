@@ -2,23 +2,6 @@ part of '../report_page.dart';
 
 String _heroTimestampPrefix() => '报告时间';
 
-String _heroAssessmentSource(String? source) {
-  final trimmed = source?.trim() ?? '';
-  if (trimmed.isEmpty) {
-    return 'AI 四诊合参';
-  }
-
-  final normalized = trimmed.toLowerCase();
-  final looksMachineLike =
-      normalized.contains('-') ||
-      normalized.contains('_') ||
-      RegExp(r'^[a-z0-9-]+$').hasMatch(normalized);
-  if (looksMachineLike) {
-    return 'AI 四诊合参';
-  }
-  return trimmed;
-}
-
 String _heroViewImagesLabel() => '查看图片';
 
 String _heroAgeLabel() => '肤龄';

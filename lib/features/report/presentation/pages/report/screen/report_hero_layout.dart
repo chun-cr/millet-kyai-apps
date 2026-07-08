@@ -60,8 +60,7 @@ bool _isCompactReportWidth(double width) =>
     width <= _kReportCompactWidthBreakpoint;
 
 String _heroHeaderMetaText(ReportViewData viewData) =>
-    '${_heroTimestampPrefix()}: ${_formatHeroDate(viewData.recordedAt)} · '
-    '${_heroAssessmentSource(viewData.source)}';
+    '${_heroTimestampPrefix()}: ${_formatHeroDate(viewData.recordedAt)}';
 
 double _estimateHeroContentHeight(
   BuildContext context, {

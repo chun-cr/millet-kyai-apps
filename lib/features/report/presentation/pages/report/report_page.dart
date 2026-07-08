@@ -6,7 +6,6 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:millet_kyai_apps/core/di/injector.dart';
 import 'package:millet_kyai_apps/core/layout/app_layout.dart';
@@ -43,9 +42,6 @@ part 'tabs/constitution_tab.dart';
 part 'tabs/therapy_acupoints.dart';
 part 'tabs/therapy_tab.dart';
 part 'tabs/advice_tab.dart';
-part 'tabs/report_enhancement_section.dart';
-part 'tabs/report_enhancement_sheets.dart';
-part 'tabs/report_enhancement_visuals.dart';
 
 typedef ReportAddSymptomAction =
     Future<void> Function({

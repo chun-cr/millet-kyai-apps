@@ -577,10 +577,12 @@ class _TongueScanPageState extends State<TongueScanPage>
       }
 
       if (tongueUpload.reportId.isEmpty) {
-        final fallbackReportId = _scanSession.reportId?.trim();
-        if (fallbackReportId == null || fallbackReportId.isEmpty) {
-          throw StateError('舌诊接口未返回 reportId。');
-        }
+        AppLogger.log(
+          'Tongue upload did not include reportId; continuing with '
+          'tongueReportId=${tongueUpload.tongueReportId ?? "empty"} '
+          'medicalCaseId=${tongueUpload.medicalCaseId ?? "empty"} '
+          'hasContinuationContext=${tongueUpload.hasContinuationContext}',
+        );
       }
 
       _scanSession.saveTongueUpload(tongueUpload);

@@ -185,16 +185,18 @@ class ScanRemoteSource {
   Future<ScanPalmUploadResult> uploadPalm({
     required String handFilePath,
     String? handFrameFilePath,
-    required String reportId,
+    String? reportId,
     ProgressCallback? onSendProgress,
   }) async {
     const path = '/api/v1/saas/mobile/ai/diagnosis/upload/hand';
+    final normalizedReportId = reportId?.trim();
     final payload = await _postMultipart(
       stage: 'palm',
       path: path,
       allowEmptyPayload: true,
       data: FormData.fromMap({
-        'reportId': reportId,
+        if (normalizedReportId != null && normalizedReportId.isNotEmpty)
+          'reportId': normalizedReportId,
         'handFile': await MultipartFile.fromFile(
           handFilePath,
           filename: _fileName(handFilePath),

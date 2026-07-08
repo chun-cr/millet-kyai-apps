@@ -346,22 +346,30 @@ class _PalmScanPageState extends State<PalmScanPage>
         return;
       }
 
-      final reportId = _scanSession.reportId;
-      if (reportId == null || reportId.isEmpty) {
-        throw StateError('缺少 reportId，请重新开始扫描。');
+      final reportId = _scanSession.reportId?.trim();
+      final uploadReportId = reportId == null || reportId.isEmpty
+          ? null
+          : reportId;
+      if (uploadReportId == null) {
+        AppLogger.log(
+          'Palm upload did not receive reportId from tongue stage; '
+          'continuing without reportId.',
+        );
       }
 
       await _scanRemoteSource.uploadPalm(
         handFilePath: capture.croppedPath,
         handFrameFilePath: handFrameFilePath,
-        reportId: reportId,
+        reportId: uploadReportId,
       );
 
       if (!mounted) {
         return;
       }
 
-      _scanSession.saveReportId(reportId);
+      if (uploadReportId != null) {
+        _scanSession.saveReportId(uploadReportId);
+      }
       setState(() {
         _scanState = PalmScanState.completed;
       });

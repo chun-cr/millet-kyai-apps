@@ -69,7 +69,6 @@ _TherapyAcupointViewData _buildFallbackAcupointViewData(
     scorePercent: dominantConstitution?.scorePercent,
     intro: _resolveAcupunctureIntro(context, viewData, points.length),
     points: points,
-    sourceLabel: viewData.isLive ? '本地兜底' : '示例取穴',
   );
 }
 
@@ -80,10 +79,10 @@ _TherapyAcupointViewData _buildBackendAcupointViewData(
 ) {
   final points = _resolveBackendAcupuncturePoints(context.l10n, therapies);
   if (points.isEmpty) {
-    return _buildFallbackAcupointViewData(context, viewData).copyWith(
-      sourceLabel: '本地兜底',
-      statusText: 'therapy 已返回，但 point 字段为空，先展示基础取穴建议。',
-    );
+    return _buildFallbackAcupointViewData(
+      context,
+      viewData,
+    ).copyWith(statusText: '取穴数据暂为空，先展示基础取穴建议。');
   }
 
   final dominantConstitution = _dominantConstitution(viewData);
@@ -98,7 +97,6 @@ _TherapyAcupointViewData _buildBackendAcupointViewData(
       points.length,
     ),
     points: points,
-    sourceLabel: null,
   );
 }
 
@@ -346,7 +344,7 @@ String _resolveBackendAcupunctureIntro(
   if (dominantConstitution == null) {
     return context.l10n.reportTherapyAcupointsIntro;
   }
-  return '依据$dominantConstitution体质对应的 point 字段，推荐以下 $pointCount 个重点穴位用于艾灸或按摩调理。';
+  return '依据$dominantConstitution体质，推荐以下 $pointCount 个重点穴位用于艾灸或按摩调理。';
 }
 
 String? _firstBackendTherapyText(
@@ -780,7 +778,6 @@ class _TherapyAcupointViewData {
     required this.scorePercent,
     required this.intro,
     required this.points,
-    required this.sourceLabel,
     this.isLoading = false,
     this.statusText,
   });
@@ -789,14 +786,12 @@ class _TherapyAcupointViewData {
   final double? scorePercent;
   final String intro;
   final List<_AcuPoint> points;
-  final String? sourceLabel;
   final bool isLoading;
   final String? statusText;
 
   _TherapyAcupointViewData copyWith({
     String? intro,
     List<_AcuPoint>? points,
-    String? sourceLabel,
     bool? isLoading,
     String? statusText,
   }) {
@@ -805,7 +800,6 @@ class _TherapyAcupointViewData {
       scorePercent: scorePercent,
       intro: intro ?? this.intro,
       points: points ?? this.points,
-      sourceLabel: sourceLabel ?? this.sourceLabel,
       isLoading: isLoading ?? this.isLoading,
       statusText: statusText ?? this.statusText,
     );
@@ -861,16 +855,12 @@ class _DynamicAcupointHeader extends StatelessWidget {
     required this.scorePercent,
     required this.intro,
     required this.pointCount,
-    this.sourceLabel,
-    this.isLoading = false,
   });
 
   final String? constitutionName;
   final double? scorePercent;
   final String intro;
   final int pointCount;
-  final String? sourceLabel;
-  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -896,13 +886,6 @@ class _DynamicAcupointHeader extends StatelessWidget {
                 text: '推荐穴位 $pointCount 个',
                 color: const Color(0xFFC9A84C),
               ),
-              if ((sourceLabel ?? '').trim().isNotEmpty)
-                _SmallBadge(
-                  text: sourceLabel!.trim(),
-                  color: isLoading
-                      ? const Color(0xFF4A7FA8)
-                      : const Color(0xFF0D7A5A),
-                ),
             ],
           ),
         if ((constitutionName ?? '').trim().isNotEmpty)
