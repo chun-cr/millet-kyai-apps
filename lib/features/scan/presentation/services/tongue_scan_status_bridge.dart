@@ -253,7 +253,7 @@ TongueConfirmationWindow buildTongueConfirmationWindow({
     return TongueConfirmationWindow(windowSize: 6, requiredEligibleFrames: 4);
   }
   if (isIOS) {
-    return TongueConfirmationWindow(windowSize: 8, requiredEligibleFrames: 6);
+    return TongueConfirmationWindow(windowSize: 6, requiredEligibleFrames: 4);
   }
   return TongueConfirmationWindow();
 }

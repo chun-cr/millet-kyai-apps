@@ -14,6 +14,8 @@ class TongueProtrusionProxy {
   static const double _minMouthAspectRatio = 0.16;
   static const double _maxMouthAspectRatio = 0.78;
   static const double _miniProgramLipGapRatio = 0.03;
+  static const double _iosLipGapCentralDropRatio = 0.024;
+  static const double _iosLipGapCentralDropToHeightRatio = 0.18;
   static const int _nativeMouthLandmarkCount = 13;
   static const int _upperLipMouthIndex = 11;
   static const int _lowerLipMouthIndex = 12;
@@ -48,8 +50,11 @@ class TongueProtrusionProxy {
       return false;
     }
 
-    if (_hasMiniProgramStyleLipGap(mouthLandmarks) &&
-        tuning == TongueDetectionTuning.android) {
+    final hasMiniProgramStyleLipGap = _hasMiniProgramStyleLipGap(
+      mouthLandmarks,
+    );
+
+    if (hasMiniProgramStyleLipGap && tuning == TongueDetectionTuning.android) {
       return true;
     }
 
@@ -99,6 +104,13 @@ class TongueProtrusionProxy {
       blendshapes,
       tuning: tuning,
     )) {
+      return true;
+    }
+
+    if (tuning == TongueDetectionTuning.ios &&
+        hasMiniProgramStyleLipGap &&
+        centralDropRatio >= _iosLipGapCentralDropRatio &&
+        centralDropToHeightRatio >= _iosLipGapCentralDropToHeightRatio) {
       return true;
     }
 
@@ -206,13 +218,13 @@ class _TongueDetectionThresholds {
   );
 
   static const _TongueDetectionThresholds ios = _TongueDetectionThresholds(
-    minSupportedCentralDropRatio: 0.030,
-    minSupportedCentralDropToHeightRatio: 0.22,
-    tongueOutThreshold: 0.21,
-    directJawOpenThreshold: 0.10,
-    jawOpenThreshold: 0.14,
-    mouthFunnelThreshold: 0.08,
-    lowerLipDropThreshold: 0.07,
+    minSupportedCentralDropRatio: 0.026,
+    minSupportedCentralDropToHeightRatio: 0.18,
+    tongueOutThreshold: 0.18,
+    directJawOpenThreshold: 0.08,
+    jawOpenThreshold: 0.12,
+    mouthFunnelThreshold: 0.06,
+    lowerLipDropThreshold: 0.055,
   );
 
   static _TongueDetectionThresholds forTuning(TongueDetectionTuning tuning) {

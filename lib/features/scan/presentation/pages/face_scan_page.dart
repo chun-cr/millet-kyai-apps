@@ -47,7 +47,6 @@ class _FaceScanPageState extends State<FaceScanPage>
   bool _hasPermission = false;
   bool _isBackCamera = false;
   bool _cameraReady = false; // PlatformView 延迟创建标志
-  bool _hasReceivedCameraFrame = false;
   bool _hasFaceDetected = false;
   bool _isScanning = false;
   bool _isSubmitting = false;
@@ -231,7 +230,6 @@ class _FaceScanPageState extends State<FaceScanPage>
     setState(() {
       _hasPermission = true;
       _cameraReady = true;
-      _hasReceivedCameraFrame = false;
     });
 
     // 等待路由切换动画完成（默认 ~300ms），再创建 PlatformView
@@ -280,11 +278,6 @@ class _FaceScanPageState extends State<FaceScanPage>
       _pauseAutoScanUntilReset = false;
     }
     setState(() {
-      _hasReceivedCameraFrame =
-          _hasReceivedCameraFrame ||
-          imageSize != Size.zero ||
-          landmarks.isNotEmpty ||
-          hasFace;
       _hasFaceDetected = hasFace;
       _normalizedLandmarks = landmarks;
       _sourceImageSize = imageSize;
@@ -955,38 +948,6 @@ class _FaceScanPageState extends State<FaceScanPage>
                       ),
               ),
             ),
-            if (_cameraReady && !_hasReceivedCameraFrame)
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A).withValues(alpha: 0.72),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 34,
-                          height: 34,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.6,
-                            color: _kGreenLight.withValues(alpha: 0.9),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '相机准备中',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.92),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             if (defaultTargetPlatform == TargetPlatform.android &&
                 _normalizedLandmarks.isNotEmpty)
               Positioned.fill(

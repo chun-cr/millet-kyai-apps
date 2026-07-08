@@ -33,14 +33,14 @@ void main() {
       expect(window.requiredEligibleFrames, 4);
     });
 
-    test('uses the strictest confirmation window on ios', () {
+    test('uses the android-length confirmation window on ios', () {
       final window = buildTongueConfirmationWindow(
         isAndroid: false,
         isIOS: true,
       );
 
-      expect(window.windowSize, 8);
-      expect(window.requiredEligibleFrames, 6);
+      expect(window.windowSize, 6);
+      expect(window.requiredEligibleFrames, 4);
     });
 
     test('keeps the standard confirmation window for fallback platforms', () {
