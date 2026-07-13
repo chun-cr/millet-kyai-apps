@@ -12,9 +12,6 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../features/profile/domain/entities/profile_me_entity.dart';
 import '../../../../features/profile/presentation/providers/profile_repository_provider.dart';
-import '../../../../features/share/domain/entities/app_id_mapping_entity.dart';
-import '../../../../features/share/domain/entities/share_referral_state.dart';
-import '../../../../features/share/presentation/providers/share_referral_provider.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/models/physique_question_models.dart';
 import '../../data/models/scan_session.dart';
@@ -30,8 +27,6 @@ const _kQuestionPrimary = Color(0xFF2D6A4F);
 const _kQuestionPrimaryLight = Color(0xFF3DAB78);
 
 typedef ProfileLoader = Future<ProfileMeEntity?> Function(BuildContext context);
-typedef AppIdMappingLoader =
-    Future<AppIdMappingEntity?> Function(BuildContext context);
 typedef ReportNavigator =
     Future<void> Function(BuildContext context, String? reportId);
 
@@ -41,14 +36,12 @@ class PhysiqueQuestionPage extends StatefulWidget {
     this.remoteSource,
     this.scanSession,
     this.profileLoader,
-    this.appIdMappingLoader,
     this.navigateToReport,
   });
 
   final PhysiqueQuestionRemoteSource? remoteSource;
   final ScanSession? scanSession;
   final ProfileLoader? profileLoader;
-  final AppIdMappingLoader? appIdMappingLoader;
   final ReportNavigator? navigateToReport;
 
   @override
@@ -62,7 +55,7 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
 
   PhysiqueQuestionPayload? _question;
   Object? _error;
-  String? _selectedOptionValue;
+  Set<String> _selectedOptionValues = <String>{};
   String? _amenorrhea;
   bool _isLoading = true;
   bool _isSubmitting = false;
@@ -81,7 +74,6 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       remoteSource: _remoteSource,
       scanSession: _scanSession,
       profileLoader: () => _loadProfile(),
-      appIdMappingLoader: () => _loadAppIdMapping(),
     );
     unawaited(_bootstrap());
   }
@@ -126,27 +118,6 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       } on Object {
         return null;
       }
-    }
-  }
-
-  Future<AppIdMappingEntity?> _loadAppIdMapping() async {
-    final loader = widget.appIdMappingLoader;
-    if (loader != null) {
-      return loader(context);
-    }
-
-    final container = ProviderScope.containerOf(context, listen: false);
-    try {
-      final state = await container.read(
-        shareReferralControllerProvider.future,
-      );
-      return state.appIdMapping.isEmpty ? null : state.appIdMapping;
-    } on Object {
-      final cached = container.read(shareReferralControllerProvider);
-      if (cached case AsyncData<ShareReferralState>(:final value)) {
-        return value.appIdMapping.isEmpty ? null : value.appIdMapping;
-      }
-      return null;
     }
   }
 
@@ -207,7 +178,7 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
         _answers = snapshot.answers;
         _amenorrhea = snapshot.amenorrhea;
         _question = null;
-        _selectedOptionValue = null;
+        _selectedOptionValues = <String>{};
         _error = null;
         _isLoading = false;
         _isSubmitting = false;
@@ -220,7 +191,7 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       _answers = snapshot.answers;
       _amenorrhea = snapshot.amenorrhea;
       _question = snapshot.question;
-      _selectedOptionValue = null;
+      _selectedOptionValues = <String>{};
       _error = null;
       _isLoading = false;
       _isSubmitting = false;
@@ -233,14 +204,16 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     }
 
     final question = _question;
-    final selectedOptionValue = _selectedOptionValue;
     if (question == null ||
-        selectedOptionValue == null ||
+        _selectedOptionValues.isEmpty ||
         question.id == null) {
       return;
     }
 
-    await _submitAnswer(question: question, optionValue: selectedOptionValue);
+    await _submitAnswer(
+      question: question,
+      optionValues: _selectedOptionValues.toList(growable: false),
+    );
   }
 
   void _handleOptionSelected(String value) {
@@ -253,26 +226,43 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       return;
     }
 
-    setState(() => _selectedOptionValue = value);
+    final selectedOptionValues = Set<String>.from(_selectedOptionValues);
     if (question.isSingleChoice) {
-      unawaited(_submitAnswer(question: question, optionValue: value));
+      selectedOptionValues
+        ..clear()
+        ..add(value);
+    } else if (!selectedOptionValues.add(value)) {
+      selectedOptionValues.remove(value);
+    }
+    setState(() => _selectedOptionValues = selectedOptionValues);
+    if (question.isSingleChoice) {
+      unawaited(
+        _submitAnswer(question: question, optionValues: <String>[value]),
+      );
     }
   }
 
   Future<void> _submitAnswer({
     required PhysiqueQuestionPayload question,
-    required String optionValue,
+    required List<String> optionValues,
   }) async {
-    if (_isSubmitting || _isLoading || _isNavigating || question.id == null) {
+    if (_isSubmitting ||
+        _isLoading ||
+        _isNavigating ||
+        question.id == null ||
+        optionValues.isEmpty) {
       return;
     }
 
     final nextAmenorrhea = question.isAmenorrheaQuestion
-        ? optionValue
+        ? optionValues.first
         : _amenorrhea;
     final nextAnswers = upsertPhysiqueQuestionAnswer(
       _answers,
-      PhysiqueQuestionRequestAnswer(id: question.id!, optionValue: optionValue),
+      PhysiqueQuestionRequestAnswer(
+        id: question.id!,
+        optionValues: optionValues,
+      ),
     );
 
     await _requestNextQuestion(
@@ -344,7 +334,7 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     return message;
   }
 
-  bool get _hasSelection => _selectedOptionValue != null;
+  bool get _hasSelection => _selectedOptionValues.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -387,7 +377,7 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
                         l10n: l10n,
                         question: question,
                         answeredCount: _answers.length,
-                        selectedOptionValue: _selectedOptionValue,
+                        selectedOptionValues: _selectedOptionValues,
                         isSubmitting: _isSubmitting,
                         hasSelection: _hasSelection,
                         submissionErrorMessage: _error == null

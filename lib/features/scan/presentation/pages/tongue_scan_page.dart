@@ -632,8 +632,6 @@ class _TongueScanPageState extends State<TongueScanPage>
         scanSession: _scanSession,
         profileLoader: () =>
             loadPhysiqueQuestionProfileFromContainer(providerContainer),
-        appIdMappingLoader: () =>
-            loadPhysiqueQuestionAppIdMappingFromContainer(providerContainer),
       );
       await controller.ensureFirstQuestion(allowReadinessRetry: false);
     } on Object catch (error, stackTrace) {

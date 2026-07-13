@@ -3,14 +3,14 @@
 class PhysiqueQuestionRequestAnswer {
   const PhysiqueQuestionRequestAnswer({
     required this.id,
-    required this.optionValue,
+    required this.optionValues,
   });
 
   final int id;
-  final String optionValue;
+  final List<String> optionValues;
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{'id': id, 'optionValue': optionValue};
+    return <String, dynamic>{'id': id, 'optionValues': optionValues};
   }
 }
 
@@ -39,61 +39,21 @@ class PhysiqueQuestionRequestContext {
   const PhysiqueQuestionRequestContext({
     required this.gender,
     required this.phyCategory,
-    this.age,
-    this.birthyear,
-    this.clinicId,
     this.exact,
-    this.medicalCaseId,
-    this.name,
-    this.phone,
-    this.storeId,
-    this.t,
-    this.tenantId,
-    this.key,
-    this.reportId,
-    this.tongueReportId,
-    this.topOrgId,
   });
 
-  final int? age;
-  final String? birthyear;
-  final int? clinicId;
   final String? exact;
   final String gender;
-  final int? medicalCaseId;
-  final String? name;
-  final String? phone;
   final String phyCategory;
-  final int? storeId;
-  final int? t;
-  final int? tenantId;
-  final String? key;
-  final String? reportId;
-  final int? tongueReportId;
-  final int? topOrgId;
 
   PhysiqueQuestionRequest buildRequest({
     required List<PhysiqueQuestionRequestAnswer> answers,
-    String? amenorrhea,
   }) {
     return PhysiqueQuestionRequest(
-      age: age,
-      amenorrhea: amenorrhea,
       answers: answers,
-      birthyear: birthyear,
-      clinicId: clinicId,
       exact: exact,
       gender: gender,
-      medicalCaseId: medicalCaseId,
-      name: name,
-      phone: phone,
       phyCategory: phyCategory,
-      storeId: storeId,
-      t: t,
-      tenantId: tenantId,
-      key: key,
-      tongueReportId: tongueReportId,
-      topOrgId: topOrgId,
     );
   }
 }
@@ -102,60 +62,21 @@ class PhysiqueQuestionRequest {
   const PhysiqueQuestionRequest({
     required this.gender,
     required this.phyCategory,
-    this.age,
-    this.amenorrhea,
     this.answers = const <PhysiqueQuestionRequestAnswer>[],
-    this.birthyear,
-    this.clinicId,
     this.exact,
-    this.medicalCaseId,
-    this.name,
-    this.phone,
-    this.storeId,
-    this.t,
-    this.tenantId,
-    this.key,
-    this.tongueReportId,
-    this.topOrgId,
   });
 
-  final int? age;
-  final String? amenorrhea;
   final List<PhysiqueQuestionRequestAnswer> answers;
-  final String? birthyear;
-  final int? clinicId;
   final String? exact;
   final String gender;
-  final int? medicalCaseId;
-  final String? name;
-  final String? phone;
   final String phyCategory;
-  final int? storeId;
-  final int? t;
-  final int? tenantId;
-  final String? key;
-  final int? tongueReportId;
-  final int? topOrgId;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{
       'gender': gender,
       'phyCategory': phyCategory,
       'answers': answers.map((item) => item.toJson()).toList(growable: false),
-      if (age != null) 'age': age,
-      if (_isPresent(amenorrhea)) 'amenorrhea': amenorrhea,
-      if (_isPresent(birthyear)) 'birthyear': birthyear,
-      if (clinicId != null) 'clinicId': clinicId,
       if (_isPresent(exact)) 'exact': exact,
-      if (medicalCaseId != null) 'medicalCaseId': medicalCaseId,
-      if (_isPresent(name)) 'name': name,
-      if (_isPresent(phone)) 'phone': phone,
-      if (storeId != null) 'storeId': storeId,
-      if (t != null) 't': t,
-      if (tenantId != null) 'tenantId': tenantId,
-      if (_isPresent(key)) 'key': key,
-      if (tongueReportId != null) 'tongueReportId': tongueReportId,
-      if (topOrgId != null) 'topOrgId': topOrgId,
     };
     return data;
   }
@@ -187,20 +108,41 @@ class PhysiqueQuestionEnvelope {
   final String? requestId;
 }
 
+enum PhysiqueQuestionFlowStatus { question, completed, invalidQuestion }
+
+class MalformedPhysiqueQuestionResponseException implements Exception {
+  const MalformedPhysiqueQuestionResponseException();
+
+  @override
+  String toString() => '体质问卷题目数据不完整，请稍后重试。';
+}
+
 class PhysiqueQuestionFlowResult {
   const PhysiqueQuestionFlowResult({
     required this.rawData,
+    required this.status,
     this.question,
     this.reportId,
     this.completedResult,
   });
 
   factory PhysiqueQuestionFlowResult.fromData(Map<String, dynamic> data) {
+    final hasQuestionCandidate = _hasQuestionCandidate(data);
     final question = PhysiqueQuestionPayload.fromData(data);
-    final hasQuestion = question.hasRenderableQuestion;
+    final isRenderableQuestion = question.hasRenderableQuestion;
+    final completedResult = _resolveCompletedResult(data);
+    final status = hasQuestionCandidate
+        ? isRenderableQuestion
+              ? PhysiqueQuestionFlowStatus.question
+              : PhysiqueQuestionFlowStatus.invalidQuestion
+        : completedResult != null
+        ? PhysiqueQuestionFlowStatus.completed
+        : PhysiqueQuestionFlowStatus.invalidQuestion;
+
     return PhysiqueQuestionFlowResult(
       rawData: data,
-      question: hasQuestion ? question : null,
+      status: status,
+      question: isRenderableQuestion ? question : null,
       reportId: _firstNonEmptyString(<Object?>[
         data['reportId'],
         data['id'],
@@ -213,16 +155,21 @@ class PhysiqueQuestionFlowResult {
         _readPath(data, 'diagnosisReport.id'),
         _readPath(data, 'medicalCase.reportId'),
       ]),
-      completedResult: hasQuestion ? null : _resolveCompletedResult(data),
+      completedResult: status == PhysiqueQuestionFlowStatus.completed
+          ? completedResult
+          : null,
     );
   }
 
+  final PhysiqueQuestionFlowStatus status;
   final PhysiqueQuestionPayload? question;
   final String? reportId;
   final Map<String, dynamic>? completedResult;
   final Map<String, dynamic> rawData;
 
-  bool get isCompleted => question == null;
+  bool get isCompleted => status == PhysiqueQuestionFlowStatus.completed;
+  bool get hasInvalidQuestion =>
+      status == PhysiqueQuestionFlowStatus.invalidQuestion;
 }
 
 class PhysiqueQuestionPayload {
@@ -448,7 +395,14 @@ Map<String, dynamic>? _resolveCompletedResult(Map<String, dynamic> data) {
       return map;
     }
   }
-  return data.isEmpty ? null : Map<String, dynamic>.from(data);
+  if (_firstNonEmptyString(<Object?>[
+    data['reportId'],
+    _readPath(data, 'report.reportId'),
+    _readPath(data, 'tongueReport.reportId'),
+  ]).isNotEmpty) {
+    return Map<String, dynamic>.from(data);
+  }
+  return null;
 }
 
 List<Map<String, dynamic>> _resolveOptionMaps(
@@ -539,6 +493,51 @@ List<Map<String, dynamic>> _resolveResponseRoots(Map<String, dynamic> data) {
 
   addRoot(data);
   return roots;
+}
+
+bool _hasQuestionCandidate(Map<String, dynamic> data) {
+  for (final source in _resolveResponseRoots(data)) {
+    for (final key in _questionObjectKeys) {
+      if (source[key] is Map) {
+        return true;
+      }
+    }
+    if (_looksLikeQuestionCandidate(source)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _looksLikeQuestionCandidate(Map<String, dynamic> data) {
+  final hasId =
+      _firstInt(<Object?>[
+        data['id'],
+        data['questionId'],
+        data['question_id'],
+        data['qId'],
+        data['subjectId'],
+        data['subject_id'],
+      ]) !=
+      null;
+  final hasTitle = _firstNonEmptyString(<Object?>[
+    data['question'],
+    data['title'],
+    data['questionTitle'],
+    data['questionText'],
+    data['questionName'],
+    data['questionContent'],
+    data['content'],
+    data['text'],
+    data['name'],
+    data['subject'],
+    data['stem'],
+    data['topic'],
+    data['displayName'],
+    data['labelText'],
+  ]).isNotEmpty;
+  final hasOptionsField = _optionListKeys.any(data.containsKey);
+  return hasTitle || (hasId && hasOptionsField);
 }
 
 bool _looksLikeQuestionMap(Map<String, dynamic> data) {

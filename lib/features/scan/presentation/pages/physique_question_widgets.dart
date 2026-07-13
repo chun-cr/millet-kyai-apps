@@ -95,7 +95,7 @@ class _QuestionCard extends StatelessWidget {
     required this.l10n,
     required this.question,
     required this.answeredCount,
-    required this.selectedOptionValue,
+    required this.selectedOptionValues,
     required this.isSubmitting,
     required this.hasSelection,
     required this.submissionErrorMessage,
@@ -106,7 +106,7 @@ class _QuestionCard extends StatelessWidget {
   final AppLocalizations l10n;
   final PhysiqueQuestionPayload? question;
   final int answeredCount;
-  final String? selectedOptionValue;
+  final Set<String> selectedOptionValues;
   final bool isSubmitting;
   final bool hasSelection;
   final String? submissionErrorMessage;
@@ -209,7 +209,9 @@ class _QuestionCard extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _QuestionOptionTile(
                     option: option,
-                    selected: option.value == selectedOptionValue,
+                    selected: selectedOptionValues.contains(option.value),
+                    allowsMultipleSelection:
+                        resolvedQuestion.allowsMultipleSelection,
                     onTap: () => onOptionSelected(option.value),
                   ),
                 ),
@@ -294,11 +296,13 @@ class _QuestionOptionTile extends StatelessWidget {
   const _QuestionOptionTile({
     required this.option,
     required this.selected,
+    required this.allowsMultipleSelection,
     required this.onTap,
   });
 
   final PhysiqueQuestionOption option;
   final bool selected;
+  final bool allowsMultipleSelection;
   final VoidCallback onTap;
 
   @override
@@ -325,23 +329,32 @@ class _QuestionOptionTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 22,
-              height: 22,
-              margin: const EdgeInsets.only(top: 1),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected ? _kQuestionPrimary : Colors.white,
-                border: Border.all(
-                  color: selected
-                      ? _kQuestionPrimary
-                      : _kQuestionPrimary.withValues(alpha: 0.25),
-                ),
-              ),
-              child: selected
-                  ? const Icon(Icons.check, size: 14, color: Colors.white)
-                  : null,
-            ),
+            allowsMultipleSelection
+                ? Checkbox(
+                    value: selected,
+                    onChanged: (_) => onTap(),
+                    activeColor: _kQuestionPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  )
+                : Container(
+                    width: 22,
+                    height: 22,
+                    margin: const EdgeInsets.only(top: 1),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? _kQuestionPrimary : Colors.white,
+                      border: Border.all(
+                        color: selected
+                            ? _kQuestionPrimary
+                            : _kQuestionPrimary.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: selected
+                        ? const Icon(Icons.check, size: 14, color: Colors.white)
+                        : null,
+                  ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

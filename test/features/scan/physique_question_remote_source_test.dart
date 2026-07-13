@@ -68,17 +68,9 @@ void main() {
         const PhysiqueQuestionRequest(
           gender: 'F',
           phyCategory: 'PHY-TEST',
-          age: 28,
-          clinicId: 3,
-          key: 'question-key',
-          storeId: 3,
-          t: 123,
-          tenantId: 8,
-          topOrgId: 8,
-          tongueReportId: 33,
-          medicalCaseId: 44,
+          exact: '1',
           answers: <PhysiqueQuestionRequestAnswer>[
-            PhysiqueQuestionRequestAnswer(id: 1, optionValue: 'A'),
+            PhysiqueQuestionRequestAnswer(id: 1, optionValues: <String>['A']),
           ],
         ),
       );
@@ -91,17 +83,12 @@ void main() {
       expect(adapter.requests.single.data, <String, dynamic>{
         'gender': 'F',
         'phyCategory': 'PHY-TEST',
-        'age': 28,
-        'clinicId': 3,
-        'key': 'question-key',
-        'storeId': 3,
-        't': 123,
-        'tenantId': 8,
-        'topOrgId': 8,
-        'tongueReportId': 33,
-        'medicalCaseId': 44,
+        'exact': '1',
         'answers': <Map<String, dynamic>>[
-          <String, dynamic>{'id': 1, 'optionValue': 'A'},
+          <String, dynamic>{
+            'id': 1,
+            'optionValues': <String>['A'],
+          },
         ],
       });
       expect(envelope.code, 0);

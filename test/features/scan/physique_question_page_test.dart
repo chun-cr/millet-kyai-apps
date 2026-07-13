@@ -9,7 +9,6 @@ import 'package:millet_kyai_apps/features/scan/data/models/scan_upload_result.da
 import 'package:millet_kyai_apps/features/scan/data/sources/physique_question_remote_source.dart';
 import 'package:millet_kyai_apps/features/scan/data/sources/scan_remote_source.dart';
 import 'package:millet_kyai_apps/features/scan/presentation/pages/physique_question_page.dart';
-import 'package:millet_kyai_apps/features/share/domain/entities/app_id_mapping_entity.dart';
 import 'package:millet_kyai_apps/l10n/app_localizations.dart';
 
 class _RecordingPhysiqueQuestionRemoteSource
@@ -57,10 +56,6 @@ Future<void> _pumpQuestionPage(
     phone: '13800000000',
     gender: 'female',
   ),
-  AppIdMappingEntity? appIdMapping = const AppIdMappingEntity(
-    topOrgId: '100',
-    clinicId: '200',
-  ),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -76,7 +71,6 @@ Future<void> _pumpQuestionPage(
         remoteSource: remoteSource,
         scanSession: scanSession,
         profileLoader: (_) async => profile,
-        appIdMappingLoader: (_) async => appIdMapping,
         navigateToReport: (context, reportId) => onNavigate(reportId),
       ),
     ),
@@ -275,7 +269,7 @@ void main() {
     },
   );
 
-  testWidgets('bootstrap can request first question without tongueReportId', (
+  testWidgets('bootstrap request only includes the physique API contract', (
     tester,
   ) async {
     final scanSession = _buildScanSessionWithoutTongueReportId();
@@ -305,10 +299,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(remoteSource.requests, hasLength(1));
-    expect(
-      remoteSource.requests.single.toJson(),
-      isNot(contains('tongueReportId')),
-    );
+    expect(remoteSource.requests.single.toJson(), <String, dynamic>{
+      'gender': 'F',
+      'phyCategory': 'tzpd',
+      'answers': <Map<String, dynamic>>[],
+    });
     expect(find.text('How have you been sleeping?'), findsOneWidget);
   });
 
@@ -336,7 +331,9 @@ void main() {
     expect(find.textContaining('Not Found'), findsOneWidget);
   });
 
-  testWidgets('bootstrap request uses miniapp payload shape', (tester) async {
+  testWidgets('bootstrap request uses physique API payload shape', (
+    tester,
+  ) async {
     final scanSession = _buildScanSession();
     final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
       <PhysiqueQuestionEnvelope>[
@@ -368,15 +365,6 @@ void main() {
       'gender': 'F',
       'phyCategory': 'tzpd',
       'answers': <Map<String, dynamic>>[],
-      'age': 29,
-      'clinicId': 200,
-      'medicalCaseId': 456,
-      'name': 'Test User',
-      'phone': '13800000000',
-      'storeId': 200,
-      'tenantId': 100,
-      'tongueReportId': 789,
-      'topOrgId': 100,
     });
   });
 
@@ -521,22 +509,121 @@ void main() {
         'gender': 'F',
         'phyCategory': 'tzpd',
         'answers': <Map<String, dynamic>>[
-          <String, dynamic>{'id': 11, 'optionValue': 'normal'},
+          <String, dynamic>{
+            'id': 11,
+            'optionValues': <String>['normal'],
+          },
         ],
-        'age': 29,
-        'clinicId': 200,
-        'medicalCaseId': 456,
-        'name': 'Test User',
-        'phone': '13800000000',
-        'storeId': 200,
-        'tenantId': 100,
-        'tongueReportId': 789,
-        'topOrgId': 100,
       });
       expect(navigatedReportId, 'report-123');
       expect(scanSession.questionCompletionResult, <String, dynamic>{
         'reportId': 'report-final',
       });
+    },
+  );
+
+  testWidgets('multiple-choice submit sends every selected option value', (
+    tester,
+  ) async {
+    final scanSession = _buildScanSession();
+    final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+      <PhysiqueQuestionEnvelope>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 11,
+              'question': 'Which symptoms do you have?',
+              'multiple': true,
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'dry-mouth', 'text': 'Dry mouth'},
+                <String, String>{'value': 'poor-sleep', 'text': 'Poor sleep'},
+              ],
+            },
+          },
+        ),
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{'reportId': 'report-final'},
+        ),
+      ],
+    );
+
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (_) async {},
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('scan_question_option_dry-mouth')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('scan_question_option_poor-sleep')),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('scan_question_submit_button')));
+    await tester.pumpAndSettle();
+
+    expect(remoteSource.requests, hasLength(2));
+    expect(remoteSource.requests.last.toJson()['answers'], <Object>[
+      <String, dynamic>{
+        'id': 11,
+        'optionValues': <String>['dry-mouth', 'poor-sleep'],
+      },
+    ]);
+  });
+
+  testWidgets(
+    'incomplete next question response stays on the question instead of completing',
+    (tester) async {
+      final scanSession = _buildScanSession();
+      final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+        <PhysiqueQuestionEnvelope>[
+          const PhysiqueQuestionEnvelope(
+            code: 0,
+            data: <String, dynamic>{
+              'next': <String, dynamic>{
+                'id': 11,
+                'question': 'How have you been sleeping?',
+                'options': <Map<String, String>>[
+                  <String, String>{'value': 'good', 'text': 'Good'},
+                ],
+              },
+            },
+          ),
+          const PhysiqueQuestionEnvelope(
+            code: 0,
+            data: <String, dynamic>{
+              'next': <String, dynamic>{
+                'id': 12,
+                'question': 'How is your appetite?',
+                'options': <Map<String, String>>[],
+              },
+              'result': <String, dynamic>{'reportId': 'report-final'},
+            },
+          ),
+        ],
+      );
+
+      var didNavigate = false;
+      await _pumpQuestionPage(
+        tester,
+        scanSession: scanSession,
+        remoteSource: remoteSource,
+        onNavigate: (_) async => didNavigate = true,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('scan_question_option_good')));
+      await tester.pumpAndSettle();
+
+      expect(didNavigate, isFalse);
+      expect(find.text('How have you been sleeping?'), findsOneWidget);
+      expect(find.text('体质问卷题目数据不完整，请稍后重试。'), findsOneWidget);
     },
   );
 
@@ -664,7 +751,10 @@ void main() {
 
       expect(remoteSource.requests, hasLength(3));
       expect(remoteSource.requests.last.toJson()['answers'], <Object>[
-        <String, dynamic>{'id': 11, 'optionValue': 'good'},
+        <String, dynamic>{
+          'id': 11,
+          'optionValues': <String>['good'],
+        },
       ]);
       expect(find.text('How is your appetite?'), findsOneWidget);
       expect(find.text('How have you been sleeping?'), findsNothing);
@@ -748,13 +838,9 @@ void main() {
         requestContext: PhysiqueQuestionRequestContext(
           gender: 'F',
           phyCategory: 'tzpd',
-          age: 29,
-          tenantId: 100,
-          storeId: 200,
-          tongueReportId: 789,
         ),
         answers: <PhysiqueQuestionRequestAnswer>[
-          PhysiqueQuestionRequestAnswer(id: 11, optionValue: 'old'),
+          PhysiqueQuestionRequestAnswer(id: 11, optionValues: <String>['old']),
         ],
         amenorrhea: null,
         question: PhysiqueQuestionPayload(
@@ -800,7 +886,10 @@ void main() {
 
     expect(remoteSource.requests, hasLength(1));
     expect(remoteSource.requests.single.toJson()['answers'], <Object>[
-      <String, dynamic>{'id': 11, 'optionValue': 'normal'},
+      <String, dynamic>{
+        'id': 11,
+        'optionValues': <String>['normal'],
+      },
     ]);
     expect(find.text('How is your appetite?'), findsOneWidget);
   });

@@ -5,14 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../features/profile/domain/entities/profile_me_entity.dart';
 import '../../../../features/profile/presentation/providers/profile_repository_provider.dart';
-import '../../../../features/share/domain/entities/app_id_mapping_entity.dart';
-import '../../../../features/share/domain/entities/share_referral_state.dart';
-import '../../../../features/share/presentation/providers/share_referral_provider.dart';
 import '../../data/models/physique_question_models.dart';
 import '../../data/models/scan_session.dart';
 import '../../data/sources/physique_question_remote_source.dart';
 import '../../data/sources/scan_remote_source.dart';
-import '../utils/scan_upload_tenant_context.dart';
 
 const defaultPhysiqueQuestionCategory = 'tzpd';
 const questionBootstrapRetryDelays = <Duration>[
@@ -29,8 +25,6 @@ const questionSubmitRetryDelays = <Duration>[
 ];
 
 typedef PhysiqueQuestionProfileLoader = Future<ProfileMeEntity?> Function();
-typedef PhysiqueQuestionAppIdMappingLoader =
-    Future<AppIdMappingEntity?> Function();
 
 class MissingReportIdException implements Exception {
   const MissingReportIdException();
@@ -69,13 +63,11 @@ class PhysiqueQuestionFlowController {
     required this.remoteSource,
     required this.scanSession,
     this.profileLoader,
-    this.appIdMappingLoader,
   });
 
   final PhysiqueQuestionRemoteSource remoteSource;
   final ScanSession scanSession;
   final PhysiqueQuestionProfileLoader? profileLoader;
-  final PhysiqueQuestionAppIdMappingLoader? appIdMappingLoader;
 
   Future<PhysiqueQuestionFlowSnapshot> ensureFirstQuestion({
     bool allowReadinessRetry = false,
@@ -119,21 +111,8 @@ class PhysiqueQuestionFlowController {
   Future<PhysiqueQuestionRequestContext> buildRequestContext() async {
     final profile = await _loadProfile();
     if (profile != null) {
-      scanSession.saveQuestionProfileSnapshot(
-        name: _resolveName(profile),
-        phone: _resolvePhone(profile),
-        gender: profile.gender,
-      );
+      scanSession.saveQuestionProfileSnapshot(gender: profile.gender);
     }
-
-    final appIdMapping = await _loadAppIdMapping();
-    final tenantContext = resolveScanUploadTenantContext(appIdMapping);
-    scanSession.saveTenantContext(
-      tenantId: tenantContext.tenantId,
-      topOrgId: tenantContext.topOrgId,
-      storeId: tenantContext.storeId,
-      clinicId: tenantContext.clinicId,
-    );
 
     final detectedGender = scanSession.detectedGender;
     final resolvedGender = _resolveGender(
@@ -150,20 +129,8 @@ class PhysiqueQuestionFlowController {
     }
 
     final requestContext = PhysiqueQuestionRequestContext(
-      age: scanSession.detectedAge,
-      clinicId: scanSession.clinicId,
       gender: resolvedGender,
-      medicalCaseId: scanSession.medicalCaseId,
-      name: scanSession.questionName,
-      phone: scanSession.questionPhone,
       phyCategory: resolvedPhysiqueCategory,
-      reportId: scanSession.reportId?.trim(),
-      storeId: scanSession.storeId,
-      t: scanSession.nextQuestionT,
-      tenantId: scanSession.tenantId,
-      key: scanSession.nextQuestionKey,
-      tongueReportId: scanSession.tongueReportId,
-      topOrgId: scanSession.topOrgId,
     );
     _validateRequestContext(requestContext);
     _logRequestContext(requestContext);
@@ -172,18 +139,6 @@ class PhysiqueQuestionFlowController {
 
   Future<ProfileMeEntity?> _loadProfile() async {
     final loader = profileLoader;
-    if (loader == null) {
-      return null;
-    }
-    try {
-      return await loader();
-    } on Object {
-      return null;
-    }
-  }
-
-  Future<AppIdMappingEntity?> _loadAppIdMapping() async {
-    final loader = appIdMappingLoader;
     if (loader == null) {
       return null;
     }
@@ -246,10 +201,17 @@ class PhysiqueQuestionFlowController {
       amenorrhea: amenorrhea,
     );
     final envelope = await remoteSource.fetchNextQuestion(
-      requestContext.buildRequest(answers: nextAnswers, amenorrhea: amenorrhea),
+      requestContext.buildRequest(answers: nextAnswers),
     );
     final result = PhysiqueQuestionFlowResult.fromData(envelope.data);
     _logQuestionResponseParseResult(envelope.data, result);
+    if (result.hasInvalidQuestion) {
+      AppLogger.network(
+        'Physique question response contains an incomplete question. '
+        '${_describeQuestionResponseShape(envelope.data)}',
+      );
+      throw const MalformedPhysiqueQuestionResponseException();
+    }
     final existingReportId = scanSession.reportId?.trim();
     final nextReportId = result.reportId?.trim();
     if (result.isCompleted && nextAnswers.isEmpty) {
@@ -322,19 +284,9 @@ class PhysiqueQuestionFlowController {
   void _logRequestContext(PhysiqueQuestionRequestContext context) {
     AppLogger.network(
       'Physique question request context: '
-      'tongueReportId=${context.tongueReportId ?? "null"} '
-      'reportId=${_isPresent(context.reportId) ? context.reportId : "null"} '
-      'medicalCaseId=${context.medicalCaseId ?? "null"} '
-      'tenantId=${context.tenantId ?? "null"} '
-      'storeId=${context.storeId ?? "null"} '
-      'topOrgId=${context.topOrgId ?? "null"} '
-      'clinicId=${context.clinicId ?? "null"} '
       'gender=${context.gender.isEmpty ? "empty" : context.gender} '
-      'age=${context.age ?? "null"} '
       'phyCategory=${context.phyCategory} '
-      't=${context.t ?? "null"} '
-      'key=${(context.key ?? "").trim().isEmpty ? "empty" : "present"} '
-      'phone=${_maskedPhone(context.phone)}',
+      'exact=${_logValue(context.exact)}',
     );
   }
 
@@ -346,14 +298,12 @@ class PhysiqueQuestionFlowController {
     final lastAnswer = answers.isEmpty ? null : answers.last;
     AppLogger.network(
       'Physique question request payload: '
-      'tongueReportId=${requestContext.tongueReportId ?? "null"} '
-      'tenantId=${requestContext.tenantId ?? "null"} '
-      'storeId=${requestContext.storeId ?? "null"} '
       'gender=${requestContext.gender.isEmpty ? "empty" : requestContext.gender} '
-      'age=${requestContext.age ?? "null"} '
+      'phyCategory=${requestContext.phyCategory} '
+      'exact=${_logValue(requestContext.exact)} '
       'answersLength=${answers.length} '
       'lastAnswerId=${lastAnswer?.id ?? "null"} '
-      'lastAnswerOptionValue=${_logValue(lastAnswer?.optionValue)} '
+      'lastAnswerOptionValues=${_logValues(lastAnswer?.optionValues)} '
       'isFirstRequest=${answers.isEmpty} '
       'isAnswerAdvanceRequest=${answers.isNotEmpty} '
       'amenorrhea=${_logValue(amenorrhea)}',
@@ -407,41 +357,19 @@ class PhysiqueQuestionFlowController {
     return defaultPhysiqueQuestionCategory.trim();
   }
 
-  String? _resolveName(ProfileMeEntity? profile) {
-    final values = <String?>[profile?.realName, profile?.nickname];
-    for (final value in values) {
-      final trimmed = value?.trim();
-      if (trimmed != null && trimmed.isNotEmpty) {
-        return trimmed;
-      }
-    }
-    return null;
-  }
-
-  String? _resolvePhone(ProfileMeEntity? profile) {
-    final trimmed = profile?.phone?.trim();
-    return trimmed == null || trimmed.isEmpty ? null : trimmed;
-  }
-
-  String _maskedPhone(String? phone) {
-    final value = phone?.trim() ?? '';
-    if (value.isEmpty) {
-      return 'empty';
-    }
-    if (value.length <= 4) {
-      return 'present';
-    }
-    return '***${value.substring(value.length - 4)}';
-  }
-
-  bool _isPresent(String? value) => value != null && value.trim().isNotEmpty;
-
   String _logValue(String? value) {
     final trimmed = value?.trim();
     if (trimmed == null || trimmed.isEmpty) {
       return 'empty';
     }
     return trimmed;
+  }
+
+  String _logValues(List<String>? values) {
+    if (values == null || values.isEmpty) {
+      return 'empty';
+    }
+    return values.join(',');
   }
 
   String _describeQuestionResponseShape(Map<String, dynamic> data) {
@@ -469,6 +397,7 @@ class PhysiqueQuestionFlowController {
       'titlePresent=${question?.title.trim().isNotEmpty == true} '
       'optionCount=${question?.options.length ?? 0} '
       'isCompleted=${result.isCompleted} '
+      'hasInvalidQuestion=${result.hasInvalidQuestion} '
       '${_describeQuestionResponseShape(data)}',
     );
   }
@@ -486,21 +415,6 @@ Future<ProfileMeEntity?> loadPhysiqueQuestionProfileFromContainer(
     } on Object {
       return null;
     }
-  }
-}
-
-Future<AppIdMappingEntity?> loadPhysiqueQuestionAppIdMappingFromContainer(
-  ProviderContainer container,
-) async {
-  try {
-    final state = await container.read(shareReferralControllerProvider.future);
-    return state.appIdMapping.isEmpty ? null : state.appIdMapping;
-  } on Object {
-    final cached = container.read(shareReferralControllerProvider);
-    if (cached case AsyncData<ShareReferralState>(:final value)) {
-      return value.appIdMapping.isEmpty ? null : value.appIdMapping;
-    }
-    return null;
   }
 }
 

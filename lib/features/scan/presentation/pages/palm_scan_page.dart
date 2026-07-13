@@ -422,8 +422,6 @@ class _PalmScanPageState extends State<PalmScanPage>
       scanSession: _scanSession,
       profileLoader: () =>
           loadPhysiqueQuestionProfileFromContainer(providerContainer),
-      appIdMappingLoader: () =>
-          loadPhysiqueQuestionAppIdMappingFromContainer(providerContainer),
     );
   }
 
