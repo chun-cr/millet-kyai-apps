@@ -192,6 +192,9 @@ Widget _buildPhysiqueAnalysisSectionCard(
 ) {
   if (section == null ||
       (section.title.isEmpty &&
+          section.heroTitle.isEmpty &&
+          section.heroSubtitle.isEmpty &&
+          section.heroDescription.isEmpty &&
           section.sectionImageUrl.isEmpty &&
           section.contents.isEmpty)) {
     return _buildPhysiqueAnalysisStatusCard(context, state);
@@ -200,7 +203,12 @@ Widget _buildPhysiqueAnalysisSectionCard(
   final sectionType = section.sectionType.toLowerCase();
   final accentColor = _physiqueAnalysisSectionAccentColor(sectionType);
   final fallbackTitle =
-      _nonEmpty(state.data?.name) ?? _nonEmpty(section.title) ?? '';
+      _nonEmpty(section.title) ?? _nonEmpty(state.data?.name) ?? '';
+  final heroContent = _PhysiqueAnalysisSectionHeroContent.resolve(
+    section: section,
+    analysis: state.data,
+    fallbackTitle: fallbackTitle,
+  );
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +217,9 @@ Widget _buildPhysiqueAnalysisSectionCard(
         key: ValueKey('report_physique_analysis_section_hero_$sectionType'),
         imageUrl: section.sectionImageUrl,
         imageAlt: section.sectionImageAlt,
-        placeholderTitle: fallbackTitle,
+        title: heroContent.title,
+        subtitle: heroContent.subtitle,
+        description: heroContent.description,
         accentColor: accentColor,
       ),
       if (section.contents.isNotEmpty) const SizedBox(height: 12),
@@ -271,63 +281,211 @@ IconData _physiqueAnalysisContentIcon(String sectionType, int index) {
   return icons[index % icons.length];
 }
 
+class _PhysiqueAnalysisSectionHeroContent {
+  const _PhysiqueAnalysisSectionHeroContent({
+    required this.title,
+    required this.subtitle,
+    required this.description,
+  });
+
+  factory _PhysiqueAnalysisSectionHeroContent.resolve({
+    required ReportPhysiqueAnalysisSectionData section,
+    required ReportPhysiqueAnalysisData? analysis,
+    required String fallbackTitle,
+  }) {
+    final firstContent = section.contents.isEmpty
+        ? null
+        : section.contents.first;
+    final isInterpretation =
+        section.sectionType.toLowerCase() == 'interpretation';
+
+    final title =
+        _nonEmpty(section.heroTitle) ??
+        (isInterpretation
+            ? _nonEmpty(analysis?.name)
+            : _nonEmpty(firstContent?.contentTitle)) ??
+        fallbackTitle;
+    final subtitle =
+        _nonEmpty(section.heroSubtitle) ??
+        (isInterpretation ? _nonEmpty(analysis?.mainFeature) : null) ??
+        '';
+    final description =
+        _nonEmpty(section.heroDescription) ??
+        (isInterpretation
+            ? _nonEmpty(analysis?.bodyFeature)
+            : _nonEmpty(firstContent?.contentText)) ??
+        '';
+
+    return _PhysiqueAnalysisSectionHeroContent(
+      title: title,
+      subtitle: subtitle,
+      description: description,
+    );
+  }
+
+  final String title;
+  final String subtitle;
+  final String description;
+}
+
 class _PhysiqueAnalysisSectionHero extends StatelessWidget {
   const _PhysiqueAnalysisSectionHero({
     super.key,
     required this.imageUrl,
     required this.imageAlt,
-    required this.placeholderTitle,
+    required this.title,
+    required this.subtitle,
+    required this.description,
     required this.accentColor,
   });
 
   final String imageUrl;
   final String imageAlt;
-  final String placeholderTitle;
+  final String title;
+  final String subtitle;
+  final String description;
   final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
-    final semanticLabel =
-        _nonEmpty(imageAlt) ?? _nonEmpty(placeholderTitle) ?? '';
+    final semanticLabel = _nonEmpty(imageAlt) ?? _nonEmpty(title) ?? '';
     final hasImage = imageUrl.isNotEmpty;
+    final surfaceColor = Color.alphaBlend(
+      accentColor.withValues(alpha: 0.045),
+      const Color(0xFFFFFEFC),
+    );
 
-    return Semantics(
-      image: semanticLabel.isNotEmpty,
-      label: semanticLabel.isEmpty ? null : semanticLabel,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: AspectRatio(
-          aspectRatio: 1.84,
-          child: hasImage
-              ? Image.network(
-                  imageUrl,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  excludeFromSemantics: true,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) {
-                      return child;
-                    }
-                    return _PhysiqueAnalysisSectionImagePlaceholder(
-                      title: placeholderTitle,
-                      accentColor: accentColor,
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) =>
-                      _PhysiqueAnalysisSectionImagePlaceholder(
-                        title: placeholderTitle,
-                        accentColor: accentColor,
-                      ),
-                )
-              : _PhysiqueAnalysisSectionImagePlaceholder(
-                  key: const ValueKey(
-                    'report_physique_analysis_section_image_placeholder',
-                  ),
-                  title: placeholderTitle,
-                  accentColor: accentColor,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final imageWidth = constraints.maxWidth * 0.64;
+        final textWidth = constraints.maxWidth * 0.60;
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              Positioned.fill(child: ColoredBox(color: surfaceColor)),
+              Positioned(
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: imageWidth,
+                child: Semantics(
+                  image: semanticLabel.isNotEmpty,
+                  label: semanticLabel.isEmpty ? null : semanticLabel,
+                  child: hasImage
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          excludeFromSemantics: true,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) {
+                              return child;
+                            }
+                            return _PhysiqueAnalysisSectionImagePlaceholder(
+                              accentColor: accentColor,
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              _PhysiqueAnalysisSectionImagePlaceholder(
+                                accentColor: accentColor,
+                              ),
+                        )
+                      : _PhysiqueAnalysisSectionImagePlaceholder(
+                          key: const ValueKey(
+                            'report_physique_analysis_section_image_placeholder',
+                          ),
+                          accentColor: accentColor,
+                        ),
                 ),
-        ),
-      ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    key: const ValueKey(
+                      'report_physique_analysis_section_image_fade',
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          surfaceColor,
+                          surfaceColor,
+                          surfaceColor.withValues(alpha: 0.96),
+                          surfaceColor.withValues(alpha: 0.64),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.35, 0.52, 0.72, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth,
+                  minHeight: 196,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 12, 18),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: textWidth,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (title.isNotEmpty) ...[
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1E1810),
+                                height: 1.25,
+                              ),
+                            ),
+                            if (subtitle.isNotEmpty || description.isNotEmpty)
+                              const SizedBox(height: 8),
+                          ],
+                          if (subtitle.isNotEmpty) ...[
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(
+                                  0xFF3A3028,
+                                ).withValues(alpha: 0.88),
+                                height: 1.5,
+                              ),
+                            ),
+                            if (description.isNotEmpty)
+                              const SizedBox(height: 6),
+                          ],
+                          if (description.isNotEmpty)
+                            Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: const Color(
+                                  0xFF3A3028,
+                                ).withValues(alpha: 0.82),
+                                height: 1.55,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -335,51 +493,21 @@ class _PhysiqueAnalysisSectionHero extends StatelessWidget {
 class _PhysiqueAnalysisSectionImagePlaceholder extends StatelessWidget {
   const _PhysiqueAnalysisSectionImagePlaceholder({
     super.key,
-    required this.title,
     required this.accentColor,
   });
 
-  final String title;
   final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: accentColor.withValues(alpha: 0.06),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.image_outlined,
-              size: 21,
-              color: accentColor.withValues(alpha: 0.72),
-            ),
-          ),
-          if (title.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1E1810),
-                height: 1.3,
-              ),
-            ),
-          ],
-        ],
+    return ColoredBox(
+      color: accentColor.withValues(alpha: 0.12),
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 24,
+          color: accentColor.withValues(alpha: 0.72),
+        ),
       ),
     );
   }
@@ -399,59 +527,69 @@ class _PhysiqueAnalysisContentItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      borderColor: accentColor.withValues(alpha: 0.08),
-      shadowColor: accentColor.withValues(alpha: 0.035),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
+    final hasImage = content.imageUrl.isNotEmpty;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.045),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 19, color: accentColor),
             ),
-            child: Icon(icon, size: 20, color: accentColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (content.contentTitle.isNotEmpty) ...[
-                  Text(
-                    content.contentTitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E1810),
-                      height: 1.35,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (content.contentTitle.isNotEmpty) ...[
+                    Text(
+                      content.contentTitle,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1E1810),
+                        height: 1.35,
+                      ),
                     ),
-                  ),
-                  if (content.contentText.isNotEmpty) const SizedBox(height: 4),
-                ],
-                if (content.contentText.isNotEmpty)
-                  Text(
-                    content.contentText,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: const Color(0xFF3A3028).withValues(alpha: 0.66),
-                      height: 1.6,
+                    if (content.contentText.isNotEmpty)
+                      const SizedBox(height: 5),
+                  ],
+                  if (content.contentText.isNotEmpty)
+                    Text(
+                      content.contentText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: const Color(0xFF3A3028).withValues(alpha: 0.78),
+                        height: 1.6,
+                      ),
                     ),
-                  ),
-                if (content.imageUrl.isNotEmpty) ...[
-                  if (content.hasTextContent) const SizedBox(height: 10),
-                  _PhysiqueAnalysisNetworkImage(
-                    imageUrl: content.imageUrl,
-                    imageAlt: content.imageAlt,
-                    height: 112,
-                  ),
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+            if (hasImage) ...[
+              const SizedBox(width: 12),
+              _PhysiqueAnalysisNetworkImage(
+                imageUrl: content.imageUrl,
+                imageAlt: content.imageAlt,
+                width: 88,
+                height: 88,
+                placeholderColor: accentColor,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -461,12 +599,16 @@ class _PhysiqueAnalysisNetworkImage extends StatelessWidget {
   const _PhysiqueAnalysisNetworkImage({
     required this.imageUrl,
     required this.imageAlt,
+    required this.width,
     required this.height,
+    required this.placeholderColor,
   });
 
   final String imageUrl;
   final String imageAlt;
+  final double width;
   final double height;
+  final Color placeholderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +617,7 @@ class _PhysiqueAnalysisNetworkImage extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: Image.network(
         imageUrl,
-        width: double.infinity,
+        width: width,
         height: height,
         fit: BoxFit.cover,
         semanticLabel: alt.isEmpty ? null : alt,
@@ -485,11 +627,21 @@ class _PhysiqueAnalysisNetworkImage extends StatelessWidget {
           }
           return Container(
             height: height,
-            width: double.infinity,
-            color: const Color(0xFF2D6A4F).withValues(alpha: 0.05),
+            width: width,
+            color: placeholderColor.withValues(alpha: 0.12),
           );
         },
-        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+        errorBuilder: (context, error, stackTrace) => Container(
+          alignment: Alignment.center,
+          height: height,
+          width: width,
+          color: placeholderColor.withValues(alpha: 0.12),
+          child: Icon(
+            Icons.image_outlined,
+            size: 20,
+            color: placeholderColor.withValues(alpha: 0.72),
+          ),
+        ),
       ),
     );
   }

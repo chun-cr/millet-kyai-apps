@@ -1040,6 +1040,10 @@ void main() {
               },
               {
                 'sectionType': 'conditioning_reference',
+                'heroTitle': 'Qi recovery routine',
+                'heroSubtitle': 'Build a steady daily rhythm.',
+                'heroDescription':
+                    'Rest, meals, and light activity come first.',
                 'title': '调养参考',
                 'sortNo': 2,
                 'contents': [
@@ -1119,9 +1123,10 @@ void main() {
       findsOneWidget,
     );
     final interpretationHeroSize = tester.getSize(interpretationHero);
+    expect(interpretationHeroSize.height, greaterThanOrEqualTo(196));
     expect(
-      interpretationHeroSize.width / interpretationHeroSize.height,
-      closeTo(1.84, 0.01),
+      find.byKey(const ValueKey('report_physique_analysis_section_image_fade')),
+      findsOneWidget,
     );
     expect(
       find.byKey(
@@ -1133,18 +1138,34 @@ void main() {
     );
     expect(find.text('体质分析'), findsOneWidget);
     expect(find.text('主要特征'), findsOneWidget);
-    expect(find.text('元气不足，容易疲乏。'), findsOneWidget);
+    expect(find.text('元气不足，容易疲乏。'), findsWidgets);
     expect(find.textContaining('疲乏、气短'), findsOneWidget);
     expect(find.textContaining('易感冒、内脏下垂倾向'), findsOneWidget);
     expect(find.text('体质解读'), findsOneWidget);
     expect(find.text('气虚解读'), findsOneWidget);
     expect(find.text('重点是补气健脾，减少持续透支。'), findsOneWidget);
+    final interpretationContentText = tester.widget<Text>(
+      find.text('重点是补气健脾，减少持续透支。'),
+    );
+    expect(interpretationContentText.maxLines, isNull);
+    expect(interpretationContentText.overflow, isNull);
     expect(find.text('作息'), findsNothing);
     expect(find.text('过度劳累'), findsNothing);
 
     await tester.tap(find.text(l10n.reportTabTherapy));
     await tester.pumpAndSettle();
     expect(find.text('调养参考'), findsOneWidget);
+    expect(find.text('Qi recovery routine'), findsOneWidget);
+    expect(find.text('Build a steady daily rhythm.'), findsOneWidget);
+    expect(
+      find.text('Rest, meals, and light activity come first.'),
+      findsOneWidget,
+    );
+    final conditioningHeroDescription = tester.widget<Text>(
+      find.text('Rest, meals, and light activity come first.'),
+    );
+    expect(conditioningHeroDescription.maxLines, isNull);
+    expect(conditioningHeroDescription.overflow, isNull);
     expect(find.text('作息调养'), findsOneWidget);
     expect(find.text('保持固定入睡时间，避免连续熬夜。'), findsOneWidget);
     expect(find.text('恬淡虚无'), findsNothing);
@@ -1161,8 +1182,8 @@ void main() {
     await tester.tap(find.text(l10n.reportTabAdvice));
     await tester.pumpAndSettle();
     expect(find.text('饮食建议'), findsOneWidget);
-    expect(find.text('饮食节律'), findsOneWidget);
-    expect(find.text('少量多餐，优先温软易消化食物。'), findsOneWidget);
+    expect(find.text('饮食节律'), findsWidgets);
+    expect(find.text('少量多餐，优先温软易消化食物。'), findsWidgets);
     expect(find.text('山药'), findsNothing);
     expect(find.text('薏仁'), findsNothing);
     expect(find.text('红枣'), findsNothing);

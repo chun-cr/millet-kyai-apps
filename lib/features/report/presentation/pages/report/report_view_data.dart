@@ -245,6 +245,9 @@ class ReportPhysiqueAnalysisSectionData {
   const ReportPhysiqueAnalysisSectionData({
     required this.sectionType,
     required this.title,
+    required this.heroTitle,
+    required this.heroSubtitle,
+    required this.heroDescription,
     required this.sectionImageUrl,
     required this.sectionImageAlt,
     required this.sortNo,
@@ -267,6 +270,9 @@ class ReportPhysiqueAnalysisSectionData {
     return ReportPhysiqueAnalysisSectionData(
       sectionType: _asString(json['sectionType']).trim(),
       title: _asString(json['title']).trim(),
+      heroTitle: _asString(json['heroTitle']).trim(),
+      heroSubtitle: _asString(json['heroSubtitle']).trim(),
+      heroDescription: _asString(json['heroDescription']).trim(),
       sectionImageUrl: _asString(json['sectionImageUrl']).trim(),
       sectionImageAlt: _asString(json['sectionImageAlt']).trim(),
       sortNo: _asNum(json['sortNo'])?.toInt(),
@@ -276,6 +282,9 @@ class ReportPhysiqueAnalysisSectionData {
 
   final String sectionType;
   final String title;
+  final String heroTitle;
+  final String heroSubtitle;
+  final String heroDescription;
   final String sectionImageUrl;
   final String sectionImageAlt;
   final int? sortNo;
@@ -284,6 +293,9 @@ class ReportPhysiqueAnalysisSectionData {
   bool get hasDisplayableContent =>
       sectionType.isNotEmpty ||
       title.isNotEmpty ||
+      heroTitle.isNotEmpty ||
+      heroSubtitle.isNotEmpty ||
+      heroDescription.isNotEmpty ||
       sectionImageUrl.isNotEmpty ||
       contents.isNotEmpty;
 }
