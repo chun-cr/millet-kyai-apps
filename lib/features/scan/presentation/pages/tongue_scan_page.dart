@@ -19,14 +19,17 @@ import '../../../../core/utils/logger.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../data/models/scan_session.dart';
 import '../../data/models/scan_upload_result.dart';
+import '../../data/sources/physique_question_remote_source.dart';
 import '../../data/sources/scan_remote_source.dart';
+import '../services/physique_question_flow_controller.dart';
 import '../services/scan_capture_bridge.dart';
 import '../services/tongue_scan_status_bridge.dart';
 import '../utils/scan_capture_geometry.dart';
-import '../utils/scan_debug_error_dialog.dart';
+import '../utils/scan_failure_feedback.dart';
 import '../utils/scan_upload_tenant_context.dart';
 import '../widgets/camera_preview_widget.dart';
 import '../widgets/scan_step_indicator.dart';
+import '../widgets/scan_status_button.dart';
 
 part 'tongue_scan/tongue_scan_logic.dart';
 part 'tongue_scan/tongue_scan_widgets.dart';
@@ -69,7 +72,6 @@ class _TongueScanPageState extends State<TongueScanPage>
   bool _holdEligible = false;
   bool _stopMonitoringOnDispose = true;
   bool _pauseAutoScanUntilReset = false;
-  double _scanProgress = 0;
   ScanState _scanState = ScanState.idle;
   Size _cameraViewportSize = Size.zero;
   String _mouthDirection = ''; // 方向提示
@@ -212,7 +214,6 @@ class _TongueScanPageState extends State<TongueScanPage>
       _mouthPresent = false;
       _holdEligible = false;
       _pauseAutoScanUntilReset = false;
-      _scanProgress = 0;
       _mouthDirection = '';
       _latestStatus = const TongueScanStatus(mouthLandmarkCount: 0);
     });
@@ -224,7 +225,7 @@ class _TongueScanPageState extends State<TongueScanPage>
       await _requestPermission();
       return;
     }
-    _cancelHoldTracking(resetProgress: true);
+    _cancelHoldTracking();
     if (!mounted) return;
     setState(() {
       _scanState = ScanState.scanning;
@@ -331,26 +332,28 @@ class _TongueScanPageState extends State<TongueScanPage>
     }
     if (_holdTimer != null) {
       if (!holdSignalActive) {
-        _cancelHoldTracking(resetProgress: true);
+        _cancelHoldTracking();
       }
       return;
     }
     if (canHold) {
       _startHoldTracking();
     } else {
-      _cancelHoldTracking(resetProgress: true);
+      _cancelHoldTracking();
     }
   }
 
   void _logTongueUploadResponse(ScanTongueUploadResult response) {
     AppLogger.log(
-      'Tongue upload response '
-      'missingTongue=${response.missingTongue} '
-      'reportId=${response.reportId.isEmpty ? "empty" : response.reportId} '
-      'imageUrl=${response.imageUrl.isEmpty ? "empty" : response.imageUrl} '
-      'analysisResult=${response.analysisResult} '
-      'tongueReport=${response.tongueReport} '
-      'raw=${response.data}',
+      'Tongue upload response summary: '
+      'stage=tongue '
+      'path=/api/v1/saas/mobile/ai/diagnosis/upload '
+      'analysisSuccess=${response.analysisSucceeded} '
+      'hasTongue=${response.hasDetectedTongue} '
+      'tongueReportSuccess=${response.tongueReportSucceeded} '
+      'tongueReportIdEmpty=${response.reportId.isEmpty} '
+      'imageId=${response.imageId.isEmpty ? "empty" : response.imageId} '
+      'requestId=${response.requestId.isEmpty ? "empty" : response.requestId}',
     );
   }
 
@@ -468,7 +471,6 @@ class _TongueScanPageState extends State<TongueScanPage>
         unawaited(_captureAndUploadTongue());
         return;
       }
-      setState(() => _scanProgress = mapHoldProgressToVisualProgress(progress));
     });
   }
 
@@ -480,7 +482,6 @@ class _TongueScanPageState extends State<TongueScanPage>
 
     setState(() {
       _scanState = ScanState.uploading;
-      _scanProgress = 0.65;
     });
     _lastHoldAliveAt = null;
 
@@ -510,7 +511,6 @@ class _TongueScanPageState extends State<TongueScanPage>
         capture: capture,
       );
 
-      setState(() => _scanProgress = 0.68);
       await _stopMonitoringBeforeTongueUpload();
       if (!mounted) {
         return;
@@ -529,6 +529,12 @@ class _TongueScanPageState extends State<TongueScanPage>
         'Tongue upload tenant context: '
         '${describeScanUploadTenantContext(uploadTenantContext)}',
       );
+      _scanSession.saveTenantContext(
+        tenantId: uploadTenantContext.tenantId,
+        topOrgId: uploadTenantContext.topOrgId,
+        storeId: uploadTenantContext.storeId,
+        clinicId: uploadTenantContext.clinicId,
+      );
 
       final tongueUpload = await _scanRemoteSource.uploadTongue(
         imageFilePath: capture.croppedPath,
@@ -537,15 +543,6 @@ class _TongueScanPageState extends State<TongueScanPage>
         topOrgId: uploadTenantContext.topOrgId,
         storeId: uploadTenantContext.storeId,
         clinicId: uploadTenantContext.clinicId,
-        onSendProgress: (sent, total) {
-          if (!mounted) {
-            return;
-          }
-          final progress = total > 0 ? sent / total : (sent > 0 ? 0.5 : 0.0);
-          setState(
-            () => _scanProgress = mapUploadProgressToVisualProgress(progress),
-          );
-        },
       );
 
       if (!mounted) {
@@ -556,7 +553,7 @@ class _TongueScanPageState extends State<TongueScanPage>
 
       if (tongueUpload.analysisFailed) {
         _pauseAutoScanUntilReset = true;
-        _cancelHoldTracking(resetProgress: true);
+        _cancelHoldTracking();
         setState(() {
           _scanState = ScanState.scanning;
         });
@@ -567,7 +564,7 @@ class _TongueScanPageState extends State<TongueScanPage>
 
       if (tongueUpload.missingTongue) {
         _pauseAutoScanUntilReset = true;
-        _cancelHoldTracking(resetProgress: true);
+        _cancelHoldTracking();
         setState(() {
           _scanState = ScanState.scanning;
         });
@@ -576,39 +573,73 @@ class _TongueScanPageState extends State<TongueScanPage>
         return;
       }
 
-      if (tongueUpload.reportId.isEmpty) {
+      if (!tongueUpload.hasGeneratedReport) {
         AppLogger.log(
-          'Tongue upload did not include reportId; continuing with '
-          'tongueReportId=${tongueUpload.tongueReportId ?? "empty"} '
+          'Tongue report generation failed; stopping before palm scan. '
+          'analysisSuccess=${tongueUpload.analysisSucceeded} '
+          'hasTongue=${tongueUpload.hasDetectedTongue} '
+          'tongueReportSuccess=${tongueUpload.tongueReportSucceeded} '
+          'tongueReportIdEmpty=${tongueUpload.reportId.isEmpty} '
+          'imageId=${tongueUpload.imageId.isEmpty ? "empty" : tongueUpload.imageId} '
+          'requestId=${tongueUpload.requestId.isEmpty ? "empty" : tongueUpload.requestId} '
           'medicalCaseId=${tongueUpload.medicalCaseId ?? "empty"} '
           'hasContinuationContext=${tongueUpload.hasContinuationContext}',
         );
+        _pauseAutoScanUntilReset = true;
+        _cancelHoldTracking();
+        setState(() {
+          _scanState = ScanState.scanning;
+        });
+        showAppToast(context, '舌诊报告生成失败，请重新扫描。', kind: AppToastKind.info);
+        await _resumeMonitoringAfterTongueUploadFailure();
+        return;
       }
 
       _scanSession.saveTongueUpload(tongueUpload);
+      unawaited(_prefetchQuestionnaireFirstQuestion(providerContainer));
       setState(() {
         _scanState = ScanState.completed;
-        _scanProgress = 1;
       });
       await _navigateToPalmScan();
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      AppLogger.log('Tongue scan submission failed: $error\n$stackTrace');
       if (!mounted) {
         return;
       }
       _pauseAutoScanUntilReset = true;
-      _cancelHoldTracking(resetProgress: true);
+      _cancelHoldTracking();
       setState(() {
         _scanState = ScanState.scanning;
       });
-      final failureTitle = context.l10n.scanTongueUploadFailedTitle;
       await _resumeMonitoringAfterTongueUploadFailure();
       if (!mounted) {
         return;
       }
-      await showScanDebugErrorDialog(
+      showScanFailureToast(
         context,
-        title: failureTitle,
+        stage: ScanFailureStage.tongue,
         error: error,
+      );
+    }
+  }
+
+  Future<void> _prefetchQuestionnaireFirstQuestion(
+    ProviderContainer providerContainer,
+  ) async {
+    try {
+      final controller = PhysiqueQuestionFlowController(
+        remoteSource: PhysiqueQuestionRemoteSource(getIt<DioClient>()),
+        scanSession: _scanSession,
+        profileLoader: () =>
+            loadPhysiqueQuestionProfileFromContainer(providerContainer),
+        appIdMappingLoader: () =>
+            loadPhysiqueQuestionAppIdMappingFromContainer(providerContainer),
+      );
+      await controller.ensureFirstQuestion(allowReadinessRetry: false);
+    } on Object catch (error, stackTrace) {
+      _scanSession.clearQuestionPrefetch();
+      AppLogger.network(
+        'Question prefetch after tongue upload failed: $error\n$stackTrace',
       );
     }
   }
@@ -624,13 +655,10 @@ class _TongueScanPageState extends State<TongueScanPage>
     context.pushReplacement(AppRoutes.scanPalm);
   }
 
-  void _cancelHoldTracking({required bool resetProgress}) {
+  void _cancelHoldTracking() {
     _holdTimer?.cancel();
     _holdTimer = null;
     _lastHoldAliveAt = null;
-    if (resetProgress && mounted) {
-      setState(() => _scanProgress = 0);
-    }
   }
 
   @override
@@ -1013,18 +1041,6 @@ class _TongueScanPageState extends State<TongueScanPage>
             ),
           ),
 
-          // 进度条（底部）
-          if (shouldShowTongueProgressFeedback(
-            scanState: _scanState,
-            holdEligible: _holdEligible,
-          ))
-            Positioned(
-              bottom: -66,
-              left: frameW * 0.2,
-              right: frameW * 0.2,
-              child: _ScanProgressBar(progress: _scanProgress),
-            ),
-
           // 状态气泡
           Positioned(
             bottom: -48,
@@ -1116,6 +1132,9 @@ class _TongueScanPageState extends State<TongueScanPage>
                 _buildPrimaryButton(
                   label: primaryButtonLabel,
                   enabled: canStart && !isCompleted,
+                  busy:
+                      _scanState == ScanState.scanning ||
+                      _scanState == ScanState.uploading,
                   onTap: () => unawaited(_startScan()),
                   isNext: isCompleted,
                 ),
@@ -1130,49 +1149,20 @@ class _TongueScanPageState extends State<TongueScanPage>
   Widget _buildPrimaryButton({
     required String label,
     required bool enabled,
+    required bool busy,
     VoidCallback? onTap,
     bool isNext = false,
   }) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: enabled
-              ? LinearGradient(
-                  colors: isNext
-                      ? const [Color(0xFF1D5E40), _kAccent, _kAccentLight]
-                      : const [Color(0xFF1D5E40), _kAccent, _kAccentLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: enabled ? null : const Color(0xFFE0DDD8),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: _kAccent.withValues(alpha: 0.35),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: enabled ? Colors.white : const Color(0xFF9A9590),
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-      ),
+    return ScanStatusButton(
+      label: label,
+      enabled: enabled,
+      busy: busy,
+      completed: isNext,
+      prominent: isNext,
+      onTap: onTap,
+      accent: _kAccent,
+      accentLight: _kAccentLight,
+      accentDark: const Color(0xFF1D5E40),
     );
   }
 }

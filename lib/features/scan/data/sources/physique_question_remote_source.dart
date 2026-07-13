@@ -19,6 +19,11 @@ class PhysiqueQuestionRemoteSource {
       final response = await _dioClient.dio.post<dynamic>(
         path,
         data: request.toJson(),
+        options: Options(
+          extra: const <String, dynamic>{
+            DioClient.allowUnsafeRetryAfterTokenRefreshExtraKey: true,
+          },
+        ),
       );
       final envelope = _asMap(response.data);
       if (envelope == null) {

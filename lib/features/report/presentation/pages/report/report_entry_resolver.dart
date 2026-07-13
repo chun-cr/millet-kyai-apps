@@ -16,12 +16,14 @@ class ReportEntryResolver extends StatefulWidget {
   const ReportEntryResolver({
     super.key,
     required this.reportId,
+    this.initialViewData,
     required this.loadReportViewData,
     this.loadConsultNavigate,
     required this.buildReportScreen,
   });
 
   final String? reportId;
+  final ReportViewData? initialViewData;
   final Future<ReportViewData> Function(String reportId)? loadReportViewData;
   final Future<DiagnosisMaNavigate?> Function(ReportViewData viewData)?
   loadConsultNavigate;
@@ -33,6 +35,7 @@ class ReportEntryResolver extends StatefulWidget {
 
 class _ReportEntryResolverState extends State<ReportEntryResolver> {
   Future<ReportViewData>? _viewDataFuture;
+  ReportViewData? _lastViewData;
   DiagnosisMaNavigate? _consultNavigate;
   String? _consultNavigateForReportId;
 
@@ -47,6 +50,7 @@ class _ReportEntryResolverState extends State<ReportEntryResolver> {
   @override
   void initState() {
     super.initState();
+    _lastViewData = _initialViewDataForCurrentReport();
     _viewDataFuture = _createViewDataFuture();
   }
 
@@ -54,12 +58,31 @@ class _ReportEntryResolverState extends State<ReportEntryResolver> {
   void didUpdateWidget(covariant ReportEntryResolver oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.reportId != widget.reportId ||
+        oldWidget.initialViewData != widget.initialViewData ||
         oldWidget.loadReportViewData != widget.loadReportViewData ||
         oldWidget.loadConsultNavigate != widget.loadConsultNavigate) {
       _consultNavigate = null;
       _consultNavigateForReportId = null;
+      _lastViewData = _initialViewDataForCurrentReport();
       _viewDataFuture = _createViewDataFuture();
     }
+  }
+
+  ReportViewData? _initialViewDataForCurrentReport() {
+    final initialViewData = widget.initialViewData;
+    if (initialViewData == null) {
+      return null;
+    }
+
+    final reportId = _normalizedReportId;
+    final initialReportId = initialViewData.reportId?.trim();
+    if (reportId != null &&
+        initialReportId != null &&
+        initialReportId.isNotEmpty &&
+        initialReportId != reportId) {
+      return null;
+    }
+    return initialViewData;
   }
 
   Future<ReportViewData>? _createViewDataFuture() {
@@ -138,59 +161,100 @@ class _ReportEntryResolverState extends State<ReportEntryResolver> {
     });
   }
 
+  Widget _buildErrorState({Key? key, Object? error, VoidCallback? onRetry}) {
+    final message = error == null ? '报告数据缺失，无法加载诊断报告。' : error.toString();
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F1EB),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            key: key ?? const ValueKey('report_error'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 44,
+                color: Color(0xFFC06A3A),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFF3A3028).withValues(alpha: 0.76),
+                  fontSize: 13,
+                  height: 1.55,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: 20),
+                FilledButton(
+                  key: const ValueKey('report_retry_button'),
+                  onPressed: onRetry,
+                  child: Text(context.l10n.commonRetry),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _shouldKeepInitialQuestionData(ReportViewData liveViewData) {
+    final currentViewData = _lastViewData;
+    return currentViewData?.includeQuestions == true &&
+        liveViewData.includeQuestions != true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final reportId = _normalizedReportId;
     if (reportId == null) {
-      return widget.buildReportScreen(
-        const ValueKey('report_mode_demo'),
-        ReportViewData.demo(),
+      return _buildErrorState(
+        key: const ValueKey('report_missing_report_id'),
+        error: '报告ID缺失，无法加载诊断报告。',
       );
     }
 
     return FutureBuilder<ReportViewData>(
       future: _viewDataFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
+        ReportViewData? viewData;
+        if (snapshot.hasData) {
+          final liveViewData = snapshot.requireData;
+          if (_shouldKeepInitialQuestionData(liveViewData)) {
+            viewData = _lastViewData;
+          } else {
+            _lastViewData = liveViewData;
+            viewData = liveViewData;
+          }
+        } else {
+          viewData = _lastViewData;
+        }
+
+        if (viewData == null &&
+            snapshot.connectionState != ConnectionState.done) {
           return const ReportLoadingView();
         }
 
-        if (snapshot.hasError || !snapshot.hasData) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF4F1EB),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  key: const ValueKey('report_error'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 44,
-                      color: Color(0xFFC06A3A),
-                    ),
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      key: const ValueKey('report_retry_button'),
-                      onPressed: _retry,
-                      child: Text(context.l10n.commonRetry),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        if (viewData == null && (snapshot.hasError || !snapshot.hasData)) {
+          return _buildErrorState(
+            error: snapshot.error ?? '报告数据缺失，无法加载诊断报告。',
+            onRetry: _retry,
           );
         }
 
-        final viewData = snapshot.requireData.copyWith(
+        final resolvedViewData = viewData!.copyWith(
           consultNavigate: _consultNavigate,
         );
-        _scheduleConsultNavigateLoad(viewData);
+        _scheduleConsultNavigateLoad(resolvedViewData);
 
         return widget.buildReportScreen(
           const ValueKey('report_mode_live'),
-          viewData,
+          resolvedViewData,
         );
       },
     );

@@ -8,12 +8,13 @@ import 'interceptors/log_interceptor.dart';
 import 'interceptors/auth_interceptor.dart';
 
 class DioClient {
-  static const String _defaultBaseUrl =
-      'https://saas-api.dev51.permillet.com';
+  static const String _defaultBaseUrl = 'https://saas-api.dev51.permillet.com';
   static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
   static const String skipPlatformHeadersExtraKey = 'skip_platform_headers';
   static const String skipAuthorizationHeaderExtraKey =
       'skip_authorization_header';
+  static const String allowUnsafeRetryAfterTokenRefreshExtraKey =
+      'allow_unsafe_retry_after_token_refresh';
   static const String appId = AppIdentity.fallbackAppId;
   static const String wechatMiniProgramAppId = String.fromEnvironment(
     'WECHAT_MINI_PROGRAM_APP_ID',
@@ -86,6 +87,7 @@ class DioClient {
         headers: {'X-App-Id': AppIdentity.currentAppId, 'X-Platform': platform},
       ),
     );
+    debugPrint('[API_BASE_URL] ${DioClient.baseUrl}');
     dio.interceptors.add(AppIdentityInterceptor());
     dio.interceptors.add(AuthInterceptor());
     dio.interceptors.add(AppLogInterceptor());

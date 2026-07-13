@@ -17,6 +17,30 @@ const _kHeroMeasurementSlackRegular = 16.0;
 const _kHeroMinExpandedDeltaCompact = 8.0;
 const _kHeroMinExpandedDeltaRegular = 18.0;
 
+enum _ReportPhysiqueAnalysisStatus { demo, loading, loaded, empty, failed }
+
+class _ReportPhysiqueAnalysisState {
+  const _ReportPhysiqueAnalysisState._(this.status, [this.data]);
+
+  const _ReportPhysiqueAnalysisState.demo()
+    : this._(_ReportPhysiqueAnalysisStatus.demo);
+
+  const _ReportPhysiqueAnalysisState.loading()
+    : this._(_ReportPhysiqueAnalysisStatus.loading);
+
+  const _ReportPhysiqueAnalysisState.loaded(ReportPhysiqueAnalysisData data)
+    : this._(_ReportPhysiqueAnalysisStatus.loaded, data);
+
+  const _ReportPhysiqueAnalysisState.empty()
+    : this._(_ReportPhysiqueAnalysisStatus.empty);
+
+  const _ReportPhysiqueAnalysisState.failed()
+    : this._(_ReportPhysiqueAnalysisStatus.failed);
+
+  final _ReportPhysiqueAnalysisStatus status;
+  final ReportPhysiqueAnalysisData? data;
+}
+
 class _ReportScreen extends StatefulWidget {
   const _ReportScreen({
     super.key,
@@ -49,6 +73,8 @@ class _ReportScreenState extends State<_ReportScreen>
   late Animation<double> _heroScoreAnim;
   Timer? _heroScoreTimer;
   ReportUnlockService? _reportUnlockService;
+  Future<ReportPhysiqueAnalysisData?>? _physiqueAnalysisFuture;
+  String? _physiqueAnalysisSignature;
 
   int _currentTab = 0;
   final Set<int> _visitedTabs = <int>{0};
@@ -80,6 +106,7 @@ class _ReportScreenState extends State<_ReportScreen>
       _reportUnlockService!.state.addListener(_handleUnlockStateChanged);
       _initializeUnlockState();
     }
+    _syncPhysiqueAnalysisFuture();
   }
 
   Future<void> _initializeUnlockState() async {
@@ -108,6 +135,14 @@ class _ReportScreenState extends State<_ReportScreen>
     setState(() {
       _isUnlocked = next.isUnlocked;
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReportScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewData != widget.viewData) {
+      _syncPhysiqueAnalysisFuture();
+    }
   }
 
   @override
@@ -210,6 +245,74 @@ class _ReportScreenState extends State<_ReportScreen>
   double _heroExpandedHeight(BuildContext context) =>
       _estimateHeroExpandedHeight(context, widget.viewData);
 
+  void _syncPhysiqueAnalysisFuture() {
+    final signature = _physiqueAnalysisQuerySignature(widget.viewData);
+    if (signature == null) {
+      _physiqueAnalysisFuture = null;
+      _physiqueAnalysisSignature = null;
+      return;
+    }
+    if (_physiqueAnalysisSignature == signature) {
+      return;
+    }
+    _physiqueAnalysisSignature = signature;
+    _physiqueAnalysisFuture = _loadPhysiqueAnalysis(widget.viewData);
+  }
+
+  String? _physiqueAnalysisQuerySignature(ReportViewData viewData) {
+    if (!viewData.isLive) {
+      return null;
+    }
+    final physiqueId = _dominantPhysiqueId(viewData);
+    if (physiqueId == null) {
+      return null;
+    }
+    return [
+      viewData.reportId?.trim() ?? '',
+      viewData.token?.trim() ?? '',
+      physiqueId.toString(),
+    ].join('|');
+  }
+
+  Future<ReportPhysiqueAnalysisData?> _loadPhysiqueAnalysis(
+    ReportViewData viewData,
+  ) async {
+    final physiqueId = _dominantPhysiqueId(viewData);
+    if (physiqueId == null) {
+      return null;
+    }
+    final payload = await ReportRemoteSource(
+      getIt<DioClient>(),
+    ).getPhysiqueAnalysis(physiqueId);
+    if (payload == null) {
+      return null;
+    }
+    final analysis = ReportPhysiqueAnalysisData.fromJson(payload);
+    return analysis.hasDisplayableContent ? analysis : null;
+  }
+
+  _ReportPhysiqueAnalysisState _resolvePhysiqueAnalysisState(
+    AsyncSnapshot<ReportPhysiqueAnalysisData?> snapshot,
+  ) {
+    if (!widget.viewData.isLive) {
+      return const _ReportPhysiqueAnalysisState.demo();
+    }
+    if (_physiqueAnalysisFuture == null) {
+      return const _ReportPhysiqueAnalysisState.empty();
+    }
+    if (snapshot.connectionState != ConnectionState.done) {
+      return const _ReportPhysiqueAnalysisState.loading();
+    }
+    if (snapshot.hasError) {
+      return const _ReportPhysiqueAnalysisState.failed();
+    }
+    final data = snapshot.data;
+    if (data == null || !data.hasDisplayableContent) {
+      return const _ReportPhysiqueAnalysisState.empty();
+    }
+    return _ReportPhysiqueAnalysisState.loaded(data);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,35 +323,46 @@ class _ReportScreenState extends State<_ReportScreen>
           _buildSliverHeader(innerBoxIsScrolled),
           _buildTabBarHeader(),
         ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _Tab1Overview(
-              viewData: widget.viewData,
-              scoreAnim: _heroScoreAnim,
-              isUnlocked: _isUnlocked,
-              onUnlock: _handleUnlock,
-              onNavigateToTab: _navigateToTab,
-              addReportSymptom: widget.addReportSymptom,
-              deleteReportSymptom: widget.deleteReportSymptom,
-            ),
-            _Tab2Constitution(
-              viewData: widget.viewData,
-              isUnlocked: _isUnlocked,
-              onUnlock: _handleUnlock,
-            ),
-            _Tab3Therapy(
-              viewData: widget.viewData,
-              isUnlocked: _isUnlocked,
-              onUnlock: _handleUnlock,
-            ),
-            _Tab4Advice(
-              viewData: widget.viewData,
-              isUnlocked: _isUnlocked,
-              onUnlock: _handleUnlock,
-              shouldLoadRecommendations: _visitedTabs.contains(3),
-            ),
-          ],
+        body: FutureBuilder<ReportPhysiqueAnalysisData?>(
+          future: _physiqueAnalysisFuture,
+          builder: (context, snapshot) {
+            final physiqueAnalysisState = _resolvePhysiqueAnalysisState(
+              snapshot,
+            );
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                _Tab1Overview(
+                  viewData: widget.viewData,
+                  scoreAnim: _heroScoreAnim,
+                  isUnlocked: _isUnlocked,
+                  onUnlock: _handleUnlock,
+                  onNavigateToTab: _navigateToTab,
+                  addReportSymptom: widget.addReportSymptom,
+                  deleteReportSymptom: widget.deleteReportSymptom,
+                ),
+                _Tab2Constitution(
+                  viewData: widget.viewData,
+                  physiqueAnalysisState: physiqueAnalysisState,
+                  isUnlocked: _isUnlocked,
+                  onUnlock: _handleUnlock,
+                ),
+                _Tab3Therapy(
+                  viewData: widget.viewData,
+                  physiqueAnalysisState: physiqueAnalysisState,
+                  isUnlocked: _isUnlocked,
+                  onUnlock: _handleUnlock,
+                ),
+                _Tab4Advice(
+                  viewData: widget.viewData,
+                  physiqueAnalysisState: physiqueAnalysisState,
+                  isUnlocked: _isUnlocked,
+                  onUnlock: _handleUnlock,
+                  shouldLoadRecommendations: _visitedTabs.contains(3),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

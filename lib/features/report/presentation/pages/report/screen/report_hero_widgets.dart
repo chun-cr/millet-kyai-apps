@@ -429,13 +429,13 @@ class _HeroInfoColumn extends StatelessWidget {
     final primaryConstitution =
         viewData.primaryConstitution?.trim().isNotEmpty == true
         ? viewData.primaryConstitution!.trim()
-        : '平和体质';
+        : '暂无体质数据';
     final therapySummary =
         viewData.heroTherapySummary?.trim().isNotEmpty == true
         ? viewData.heroTherapySummary!.trim()
         : viewData.summary?.trim().isNotEmpty == true
         ? viewData.summary!.trim()
-        : '结合饮食、作息与情志调理，保持稳定节律。';
+        : '暂无调理建议数据';
     final tongueSummary = viewData.heroTongueSymptoms
         .where((item) => item.trim().isNotEmpty)
         .join('，');

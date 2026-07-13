@@ -76,56 +76,6 @@ class _StatusPill extends StatelessWidget {
   );
 }
 
-class _BottomStatusPrompt extends StatelessWidget {
-  final String label;
-  final bool highlighted;
-
-  const _BottomStatusPrompt({required this.label, required this.highlighted});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: double.infinity,
-      height: 52,
-      decoration: BoxDecoration(
-        gradient: highlighted
-            ? const LinearGradient(
-                colors: [Color(0xFF1D5E40), _kGreen, _kGreenLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: highlighted ? null : const Color(0xFFEAE6E0),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: highlighted
-            ? [
-                BoxShadow(
-                  color: _kGreen.withValues(alpha: 0.22),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
-      ),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Text(
-        label,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: highlighted ? Colors.white : const Color(0xFF6F6861),
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
-        ),
-      ),
-    );
-  }
-}
-
 class _ScanCorner extends StatelessWidget {
   final Color color;
   final bool top;

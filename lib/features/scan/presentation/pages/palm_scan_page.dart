@@ -14,6 +14,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -24,15 +25,18 @@ import '../../../../core/network/dio_client.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/models/scan_session.dart';
+import '../../data/sources/physique_question_remote_source.dart';
 import '../../data/sources/scan_remote_source.dart';
+import '../services/physique_question_flow_controller.dart';
 import '../services/palm_frame_renderer.dart';
 import '../services/palm_scan_status_bridge.dart';
 import '../services/scan_capture_bridge.dart';
 import '../utils/scan_capture_geometry.dart';
-import '../utils/scan_debug_error_dialog.dart';
+import '../utils/scan_failure_feedback.dart';
 import '../widgets/camera_preview_widget.dart';
 import '../widgets/hand_landmark_overlay.dart';
 import '../widgets/scan_step_indicator.dart';
+import '../widgets/scan_status_button.dart';
 
 part 'palm_scan/palm_scan_logic.dart';
 part 'palm_scan/palm_scan_widgets.dart';
@@ -53,7 +57,6 @@ class _PalmScanPageState extends State<PalmScanPage>
   static const Duration _holdInterruptionGracePeriod = Duration(
     milliseconds: 300,
   );
-  static const Duration _postSuccessDelay = Duration(milliseconds: 450);
   static const Alignment _palmGuideAlignment = Alignment(0, -0.18);
   static const double _palmGuideWidth = 244;
   static const double _palmGuideHeight = 322;
@@ -321,6 +324,15 @@ class _PalmScanPageState extends State<PalmScanPage>
     _lastHoldAliveAt = null;
 
     try {
+      final uploadReportId = _scanSession.reportId?.trim();
+      if (uploadReportId == null || uploadReportId.isEmpty) {
+        throw const ScanUploadException(
+          stage: 'palm',
+          path: '/api/v1/saas/mobile/ai/diagnosis/upload/hand',
+          message: '报告ID缺失，无法上传手诊。',
+        );
+      }
+
       final capture = await _captureBridge.capture(
         target: ScanCaptureTarget.palm,
         guide: captureGuide,
@@ -346,17 +358,6 @@ class _PalmScanPageState extends State<PalmScanPage>
         return;
       }
 
-      final reportId = _scanSession.reportId?.trim();
-      final uploadReportId = reportId == null || reportId.isEmpty
-          ? null
-          : reportId;
-      if (uploadReportId == null) {
-        AppLogger.log(
-          'Palm upload did not receive reportId from tongue stage; '
-          'continuing without reportId.',
-        );
-      }
-
       await _scanRemoteSource.uploadPalm(
         handFilePath: capture.croppedPath,
         handFrameFilePath: handFrameFilePath,
@@ -367,13 +368,11 @@ class _PalmScanPageState extends State<PalmScanPage>
         return;
       }
 
-      if (uploadReportId != null) {
-        _scanSession.saveReportId(uploadReportId);
-      }
+      _scanSession.saveReportId(uploadReportId);
       setState(() {
         _scanState = PalmScanState.completed;
       });
-      await _navigateToQuestionnaireAfterDelay();
+      await _navigateToQuestionnaireAfterPreparing();
     } on Object catch (error, stackTrace) {
       AppLogger.log('Palm scan submission failed: $error\n$stackTrace');
       if (!mounted) {
@@ -384,7 +383,7 @@ class _PalmScanPageState extends State<PalmScanPage>
       setState(() {
         _scanState = PalmScanState.scanning;
       });
-      await showScanDebugErrorDialog(context, title: '手掌上传失败', error: error);
+      showScanFailureToast(context, stage: ScanFailureStage.palm, error: error);
     }
   }
 
@@ -415,8 +414,58 @@ class _PalmScanPageState extends State<PalmScanPage>
     );
   }
 
-  Future<void> _navigateToQuestionnaireAfterDelay() async {
-    await Future<void>.delayed(_postSuccessDelay);
+  PhysiqueQuestionFlowController _buildQuestionFlowController(
+    ProviderContainer providerContainer,
+  ) {
+    return PhysiqueQuestionFlowController(
+      remoteSource: PhysiqueQuestionRemoteSource(getIt<DioClient>()),
+      scanSession: _scanSession,
+      profileLoader: () =>
+          loadPhysiqueQuestionProfileFromContainer(providerContainer),
+      appIdMappingLoader: () =>
+          loadPhysiqueQuestionAppIdMappingFromContainer(providerContainer),
+    );
+  }
+
+  Future<void> _prepareQuestionnaireBeforeNavigation() async {
+    final providerContainer = ProviderScope.containerOf(context, listen: false);
+    final controller = _buildQuestionFlowController(providerContainer);
+    final existingPrefetch = _scanSession.questionPrefetchFuture;
+    if (existingPrefetch != null) {
+      try {
+        await existingPrefetch;
+        return;
+      } on Object catch (error, stackTrace) {
+        _scanSession.clearQuestionPrefetch();
+        AppLogger.network(
+          'Question prefetch before palm completion failed; retrying: '
+          '$error\n$stackTrace',
+        );
+      }
+    }
+
+    try {
+      await controller.ensureFirstQuestion(allowReadinessRetry: true);
+    } on Object catch (error, stackTrace) {
+      AppLogger.network(
+        'Question prefetch before questionnaire navigation failed: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<void> _navigateToQuestionnaireAfterPreparing() async {
+    AppLogger.network(
+      'Palm scan completed; navigating to questionnaire with context: '
+      'reportId=${_scanSession.reportId?.trim().isNotEmpty == true ? _scanSession.reportId : "null"} '
+      'tongueReportId=${_scanSession.tongueReportId ?? "null"} '
+      'medicalCaseId=${_scanSession.medicalCaseId ?? "null"} '
+      'gender=${_scanSession.detectedGender.isEmpty ? "empty" : _scanSession.detectedGender} '
+      'age=${_scanSession.detectedAge ?? "null"} '
+      'tenantId=${_scanSession.tenantId ?? "null"} '
+      'storeId=${_scanSession.storeId ?? "null"}',
+    );
+    await _prepareQuestionnaireBeforeNavigation();
     await _navigateToQuestionnaire();
   }
 
@@ -862,6 +911,10 @@ class _PalmScanPageState extends State<PalmScanPage>
                       ? l10n.scanPalmViewingReportSoon
                       : l10n.scanScanning,
                   enabled: false,
+                  busy:
+                      _scanState == PalmScanState.scanning ||
+                      _scanState == PalmScanState.uploading,
+                  completed: _scanState == PalmScanState.completed,
                   onTap: _navigateToQuestionnaire,
                 ),
               ],
@@ -875,46 +928,20 @@ class _PalmScanPageState extends State<PalmScanPage>
   Widget _buildPrimaryButton({
     required String label,
     required bool enabled,
+    required bool busy,
+    required bool completed,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: enabled
-              ? const LinearGradient(
-                  colors: [Color(0xFF4B3E75), _kAccent, _kAccentLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: enabled ? null : const Color(0xFFE0DDD8),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: _kAccent.withValues(alpha: 0.35),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: enabled ? Colors.white : const Color(0xFF9A9590),
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-      ),
+    return ScanStatusButton(
+      label: label,
+      enabled: enabled,
+      busy: busy,
+      completed: completed,
+      prominent: completed,
+      onTap: onTap,
+      accent: _kAccent,
+      accentLight: _kAccentLight,
+      accentDark: const Color(0xFF4B3E75),
     );
   }
 }

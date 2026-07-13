@@ -14,6 +14,7 @@ import '../../../../core/utils/logger.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../widgets/scan_step_indicator.dart';
+import '../widgets/scan_status_button.dart';
 import '../widgets/camera_preview_widget.dart';
 import '../widgets/face_landmark_overlay.dart';
 import '../../data/models/scan_session.dart';
@@ -22,7 +23,7 @@ import '../services/face_scan_status_bridge.dart';
 import '../services/face_frame_mask_renderer.dart';
 import '../services/scan_capture_bridge.dart';
 import '../utils/scan_capture_geometry.dart';
-import '../utils/scan_debug_error_dialog.dart';
+import '../utils/scan_failure_feedback.dart';
 import '../utils/scan_upload_tenant_context.dart';
 
 part 'face_scan/face_scan_logic.dart';
@@ -175,6 +176,8 @@ class _FaceScanPageState extends State<FaceScanPage>
 
   bool get _bottomStatusHighlighted =>
       !_isScanning && !_isSubmitting && _isFaceReadyToHold;
+
+  bool get _bottomStatusBusy => _isScanning || _isSubmitting;
 
   bool get _showFaceBubbleStatus =>
       !_isScanning &&
@@ -510,6 +513,12 @@ class _FaceScanPageState extends State<FaceScanPage>
         'Face upload tenant context: '
         '${describeScanUploadTenantContext(uploadTenantContext)}',
       );
+      _scanSession.saveTenantContext(
+        tenantId: uploadTenantContext.tenantId,
+        topOrgId: uploadTenantContext.topOrgId,
+        storeId: uploadTenantContext.storeId,
+        clinicId: uploadTenantContext.clinicId,
+      );
 
       setState(() {
         _submitStage = FaceSubmitStage.uploading;
@@ -575,11 +584,7 @@ class _FaceScanPageState extends State<FaceScanPage>
       if (!mounted) {
         return;
       }
-      await showScanDebugErrorDialog(
-        context,
-        title: context.l10n.scanFaceUploadFailedTitle,
-        error: error,
-      );
+      showScanFailureToast(context, stage: ScanFailureStage.face, error: error);
     }
   }
 
@@ -1166,9 +1171,13 @@ class _FaceScanPageState extends State<FaceScanPage>
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
             child: Column(
               children: [
-                _BottomStatusPrompt(
+                ScanStatusButton(
                   label: _bottomStatusLabel,
-                  highlighted: _bottomStatusHighlighted,
+                  busy: _bottomStatusBusy,
+                  prominent: _bottomStatusHighlighted,
+                  accent: _kGreen,
+                  accentLight: _kGreenLight,
+                  accentDark: const Color(0xFF1D5E40),
                 ),
               ],
             ),

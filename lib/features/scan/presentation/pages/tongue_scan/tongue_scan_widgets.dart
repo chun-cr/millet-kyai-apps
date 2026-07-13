@@ -1,41 +1,5 @@
 part of '../tongue_scan_page.dart';
 
-class _ScanProgressBar extends StatelessWidget {
-  final double progress;
-  const _ScanProgressBar({required this.progress});
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      Container(
-        height: 4,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE88080).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      FractionallySizedBox(
-        widthFactor: progress.clamp(0.0, 1.0),
-        child: Container(
-          height: 4,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFE88080), Color(0xFFFF6B6B)],
-            ),
-            borderRadius: BorderRadius.circular(2),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFE88080).withValues(alpha: 0.5),
-                blurRadius: 6,
-              ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
 class _TipItem extends StatelessWidget {
   final IconData icon;
   final String label;

@@ -1,6 +1,28 @@
 part of 'report_remote_source.dart';
 
 extension ReportRemoteSourceEndpoints on ReportRemoteSource {
+  Future<Map<String, dynamic>?> getPhysiqueAnalysis(
+    Object physiqueId, {
+    String? standardVersion,
+  }) async {
+    final normalizedPhysiqueId = physiqueId.toString().trim();
+    if (normalizedPhysiqueId.isEmpty) {
+      return null;
+    }
+
+    final envelope = await _getEnvelope(
+      '/api/v1/saas/mobile/physique/${Uri.encodeComponent(normalizedPhysiqueId)}/analysis',
+      queryParameters: _cleanPayload({
+        'standardVersion': _trimmedOrNull(standardVersion),
+      }),
+    );
+    final payload = _asMap(envelope['data']);
+    if (payload.isEmpty) {
+      return null;
+    }
+    return Map<String, dynamic>.unmodifiable(payload);
+  }
+
   Future<List<Map<String, dynamic>>> getPhysiqueProducts({
     String? token,
     String? topOrgId,

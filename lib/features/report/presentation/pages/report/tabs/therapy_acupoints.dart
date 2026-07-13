@@ -61,8 +61,18 @@ _TherapyAcupointViewData _buildFallbackAcupointViewData(
   BuildContext context,
   ReportViewData viewData,
 ) {
-  final points = _resolveAcupuncturePoints(context, viewData);
   final dominantConstitution = _dominantConstitution(viewData);
+  if (viewData.isLive) {
+    return _TherapyAcupointViewData(
+      constitutionName:
+          dominantConstitution?.name ?? viewData.primaryConstitution,
+      scorePercent: dominantConstitution?.scorePercent,
+      intro: '暂无后端取穴数据。',
+      points: const <_AcuPoint>[],
+    );
+  }
+
+  final points = _resolveAcupuncturePoints(context, viewData);
   return _TherapyAcupointViewData(
     constitutionName:
         dominantConstitution?.name ?? viewData.primaryConstitution,
@@ -82,7 +92,7 @@ _TherapyAcupointViewData _buildBackendAcupointViewData(
     return _buildFallbackAcupointViewData(
       context,
       viewData,
-    ).copyWith(statusText: '取穴数据暂为空，先展示基础取穴建议。');
+    ).copyWith(statusText: '取穴数据暂为空，请稍后重试。');
   }
 
   final dominantConstitution = _dominantConstitution(viewData);
@@ -882,10 +892,11 @@ class _DynamicAcupointHeader extends StatelessWidget {
                       '体质分 ${scorePercent!.toStringAsFixed(scorePercent! % 1 == 0 ? 0 : 1)}',
                   color: const Color(0xFF4A7FA8),
                 ),
-              _SmallBadge(
-                text: '推荐穴位 $pointCount 个',
-                color: const Color(0xFFC9A84C),
-              ),
+              if (pointCount > 0)
+                _SmallBadge(
+                  text: '推荐穴位 $pointCount 个',
+                  color: const Color(0xFFC9A84C),
+                ),
             ],
           ),
         if ((constitutionName ?? '').trim().isNotEmpty)

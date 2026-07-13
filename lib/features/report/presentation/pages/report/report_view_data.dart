@@ -95,6 +95,232 @@ class ReportTongueAnalysisItemData {
   final String pathologyText;
 }
 
+@immutable
+class ReportPhysiqueAnalysisData {
+  const ReportPhysiqueAnalysisData({
+    required this.id,
+    required this.name,
+    required this.standardVersion,
+    required this.mainFeature,
+    required this.bodyFeature,
+    required this.psychologicalFeature,
+    required this.diseaseTendencyNote,
+    required this.environmentAdaptability,
+    required this.manifestations,
+    required this.diseaseTendencies,
+    required this.sections,
+  });
+
+  factory ReportPhysiqueAnalysisData.fromJson(Map<String, dynamic> json) {
+    final manifestations =
+        _asList(json['manifestations'])
+            .map((item) => ReportPhysiqueAnalysisItemData.fromDynamic(item))
+            .where((item) => item.name.isNotEmpty)
+            .toList(growable: false)
+          ..sort(_compareAnalysisSort);
+    final diseaseTendencies =
+        _asList(json['diseaseTendencies'])
+            .map((item) => ReportPhysiqueAnalysisItemData.fromDynamic(item))
+            .where((item) => item.name.isNotEmpty)
+            .toList(growable: false)
+          ..sort(_compareAnalysisSort);
+    final sections =
+        _asList(json['sections'])
+            .map(
+              (item) =>
+                  ReportPhysiqueAnalysisSectionData.fromJson(_asMap(item)),
+            )
+            .where((item) => item.hasDisplayableContent)
+            .toList(growable: false)
+          ..sort(_compareAnalysisSort);
+
+    return ReportPhysiqueAnalysisData(
+      id: _asString(json['id']).trim(),
+      name: _asString(json['name']).trim(),
+      standardVersion: _asString(json['standardVersion']).trim(),
+      mainFeature: _asString(json['mainFeature']).trim(),
+      bodyFeature: _asString(json['bodyFeature']).trim(),
+      psychologicalFeature: _asString(json['psychologicalFeature']).trim(),
+      diseaseTendencyNote: _asString(json['diseaseTendencyNote']).trim(),
+      environmentAdaptability: _asString(
+        json['environmentAdaptability'],
+      ).trim(),
+      manifestations: List.unmodifiable(manifestations),
+      diseaseTendencies: List.unmodifiable(diseaseTendencies),
+      sections: List.unmodifiable(sections),
+    );
+  }
+
+  final String id;
+  final String name;
+  final String standardVersion;
+  final String mainFeature;
+  final String bodyFeature;
+  final String psychologicalFeature;
+  final String diseaseTendencyNote;
+  final String environmentAdaptability;
+  final List<ReportPhysiqueAnalysisItemData> manifestations;
+  final List<ReportPhysiqueAnalysisItemData> diseaseTendencies;
+  final List<ReportPhysiqueAnalysisSectionData> sections;
+
+  ReportPhysiqueAnalysisSectionData? sectionByType(String sectionType) {
+    final normalized = sectionType.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    for (final section in sections) {
+      if (section.sectionType.toLowerCase() == normalized) {
+        return section;
+      }
+    }
+    return null;
+  }
+
+  ReportPhysiqueAnalysisSectionData? get interpretation =>
+      sectionByType('interpretation');
+
+  ReportPhysiqueAnalysisSectionData? get conditioningReference =>
+      sectionByType('conditioning_reference');
+
+  ReportPhysiqueAnalysisSectionData? get dietReference =>
+      sectionByType('diet_reference');
+
+  bool get hasFeatureContent {
+    return mainFeature.isNotEmpty ||
+        bodyFeature.isNotEmpty ||
+        psychologicalFeature.isNotEmpty ||
+        diseaseTendencyNote.isNotEmpty ||
+        environmentAdaptability.isNotEmpty ||
+        manifestations.isNotEmpty ||
+        diseaseTendencies.isNotEmpty;
+  }
+
+  bool get hasDisplayableContent => hasFeatureContent || sections.isNotEmpty;
+}
+
+@immutable
+class ReportPhysiqueAnalysisItemData {
+  const ReportPhysiqueAnalysisItemData({
+    required this.id,
+    required this.name,
+    required this.sortNo,
+  });
+
+  factory ReportPhysiqueAnalysisItemData.fromDynamic(Object? value) {
+    if (value is String || value is num || value is bool) {
+      return ReportPhysiqueAnalysisItemData(
+        id: '',
+        name: _asString(value).trim(),
+        sortNo: null,
+      );
+    }
+
+    final json = _asMap(value);
+    return ReportPhysiqueAnalysisItemData(
+      id: _firstNonEmpty([
+        _asString(json['id']),
+        _asString(json['physiqueId']),
+        _asString(json['manifestationId']),
+        _asString(json['diseaseTendencyId']),
+      ]),
+      name: _firstNonEmpty([
+        _asString(json['name']),
+        _asString(json['title']),
+        _asString(json['label']),
+        _asString(json['contentTitle']),
+        _asString(json['contentText']),
+        _asString(json['description']),
+      ]),
+      sortNo: _asNum(json['sortNo'])?.toInt(),
+    );
+  }
+
+  final String id;
+  final String name;
+  final int? sortNo;
+}
+
+@immutable
+class ReportPhysiqueAnalysisSectionData {
+  const ReportPhysiqueAnalysisSectionData({
+    required this.sectionType,
+    required this.title,
+    required this.sectionImageUrl,
+    required this.sectionImageAlt,
+    required this.sortNo,
+    required this.contents,
+  });
+
+  factory ReportPhysiqueAnalysisSectionData.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final contents =
+        _asList(json['contents'])
+            .map(
+              (item) =>
+                  ReportPhysiqueAnalysisContentData.fromJson(_asMap(item)),
+            )
+            .where((item) => item.hasDisplayableContent)
+            .toList(growable: false)
+          ..sort(_compareAnalysisSort);
+
+    return ReportPhysiqueAnalysisSectionData(
+      sectionType: _asString(json['sectionType']).trim(),
+      title: _asString(json['title']).trim(),
+      sectionImageUrl: _asString(json['sectionImageUrl']).trim(),
+      sectionImageAlt: _asString(json['sectionImageAlt']).trim(),
+      sortNo: _asNum(json['sortNo'])?.toInt(),
+      contents: List.unmodifiable(contents),
+    );
+  }
+
+  final String sectionType;
+  final String title;
+  final String sectionImageUrl;
+  final String sectionImageAlt;
+  final int? sortNo;
+  final List<ReportPhysiqueAnalysisContentData> contents;
+
+  bool get hasDisplayableContent =>
+      sectionType.isNotEmpty ||
+      title.isNotEmpty ||
+      sectionImageUrl.isNotEmpty ||
+      contents.isNotEmpty;
+}
+
+@immutable
+class ReportPhysiqueAnalysisContentData {
+  const ReportPhysiqueAnalysisContentData({
+    required this.contentTitle,
+    required this.contentText,
+    required this.imageUrl,
+    required this.imageAlt,
+    required this.sortNo,
+  });
+
+  factory ReportPhysiqueAnalysisContentData.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return ReportPhysiqueAnalysisContentData(
+      contentTitle: _asString(json['contentTitle']).trim(),
+      contentText: _asString(json['contentText']).trim(),
+      imageUrl: _asString(json['imageUrl']).trim(),
+      imageAlt: _asString(json['imageAlt']).trim(),
+      sortNo: _asNum(json['sortNo'])?.toInt(),
+    );
+  }
+
+  final String contentTitle;
+  final String contentText;
+  final String imageUrl;
+  final String imageAlt;
+  final int? sortNo;
+
+  bool get hasTextContent => contentTitle.isNotEmpty || contentText.isNotEmpty;
+
+  bool get hasDisplayableContent => hasTextContent || imageUrl.isNotEmpty;
+}
+
 /// 报告页唯一面向 UI 的展示模型。
 ///
 /// 后端返回的 detail 结构字段多、层级深，而且不同区域的数据来源并不一致。
@@ -129,6 +355,7 @@ class ReportViewData {
     this.heroSkinAge,
     this.heroTherapySummary,
     this.consultNavigate,
+    this.includeQuestions = false,
   });
 
   final ReportViewMode mode;
@@ -158,6 +385,7 @@ class ReportViewData {
   final double? heroSkinAge;
   final String? heroTherapySummary;
   final DiagnosisMaNavigate? consultNavigate;
+  final bool includeQuestions;
 
   bool get hasRiskIndexes => riskIndexes.isNotEmpty;
   bool get hasHealthRadar =>
@@ -203,6 +431,7 @@ class ReportViewData {
       heroSkinAge: heroSkinAge,
       heroTherapySummary: heroTherapySummary,
       consultNavigate: consultNavigate ?? this.consultNavigate,
+      includeQuestions: includeQuestions,
     );
   }
 
@@ -307,6 +536,69 @@ class ReportViewData {
     );
   }
 
+  factory ReportViewData.fromSummary(DiagnosisReportSummary summary) {
+    final riskIndexes =
+        summary.deepPredicts.categoryProbabilities
+            .map(
+              (item) => ReportRiskIndexData(
+                name: item.name.trim().isNotEmpty ? item.name.trim() : '风险指数',
+                rawProbability: item.rawProbability,
+              ),
+            )
+            .toList(growable: false)
+          ..sort(
+            (left, right) =>
+                right.rawProbability.compareTo(left.rawProbability),
+          );
+    final primaryConstitution = summary.physiqueName.trim();
+    final faceImageUrl = summary.faceImageUrl.trim();
+
+    return ReportViewData(
+      mode: ReportViewMode.live,
+      reportId: summary.id.trim().isNotEmpty ? summary.id.trim() : null,
+      token: null,
+      overallScore: _clampPercent(summary.healthScore),
+      faceScore: _clampPercent(summary.healthScore),
+      tongueScore: _clampPercent(summary.healthScore),
+      palmScore: _clampPercent(summary.healthScore),
+      constitutionScores: primaryConstitution.isEmpty
+          ? const <ReportConstitutionScoreData>[]
+          : <ReportConstitutionScoreData>[
+              ReportConstitutionScoreData(
+                id: '',
+                name: primaryConstitution,
+                scorePercent: _clampPercent(summary.healthScore),
+                hasScore: false,
+              ),
+            ],
+      riskIndexes: List.unmodifiable(riskIndexes),
+      healthRadarClassicSymptoms: const <ReportHealthRadarSymptomData>[],
+      healthRadarDeepSymptoms: const <ReportHealthRadarSymptomData>[],
+      heroSecondaryConstitutions: const <String>[],
+      heroTongueSymptoms: const <String>[],
+      tongueAnalysisItems: const <ReportTongueAnalysisItemData>[],
+      heroImageUrls: faceImageUrl.isEmpty
+          ? const <String>[]
+          : List.unmodifiable(<String>[faceImageUrl]),
+      recordedAt: summary.testTime.trim().isNotEmpty
+          ? summary.testTime.trim()
+          : null,
+      source: null,
+      tenantId: null,
+      storeId: null,
+      age: null,
+      sex: null,
+      primaryConstitution: primaryConstitution.isEmpty
+          ? null
+          : primaryConstitution,
+      secondaryBias: null,
+      summary: null,
+      heroSkinAge: null,
+      heroTherapySummary: null,
+      consultNavigate: null,
+    );
+  }
+
   factory ReportViewData.fromDetail(
     DiagnosisReportDetail detail, {
     DiagnosisMaNavigate? consultNavigate,
@@ -398,8 +690,30 @@ class ReportViewData {
       healthRadarClassicSymptoms: classicSymptoms,
       healthRadarDeepSymptoms: deepSymptoms,
       consultNavigate: consultNavigate,
+      includeQuestions:
+          _asBool(detail.analysisResult.raw['includeQuestions']) == true ||
+          _asBool(detail.raw['includeQuestions']) == true,
     );
   }
+}
+
+int _compareAnalysisSort(Object left, Object right) {
+  final leftSortNo = _analysisSortNo(left) ?? 1 << 30;
+  final rightSortNo = _analysisSortNo(right) ?? 1 << 30;
+  return leftSortNo.compareTo(rightSortNo);
+}
+
+int? _analysisSortNo(Object value) {
+  if (value is ReportPhysiqueAnalysisItemData) {
+    return value.sortNo;
+  }
+  if (value is ReportPhysiqueAnalysisSectionData) {
+    return value.sortNo;
+  }
+  if (value is ReportPhysiqueAnalysisContentData) {
+    return value.sortNo;
+  }
+  return null;
 }
 
 List<ReportConstitutionScoreData> _buildConstitutionScores(
@@ -794,6 +1108,13 @@ Map<String, dynamic> _asMap(Object? value) {
     return Map<String, dynamic>.from(value);
   }
   return const <String, dynamic>{};
+}
+
+List<Object?> _asList(Object? value) {
+  if (value is List) {
+    return value;
+  }
+  return const <Object?>[];
 }
 
 String _asString(Object? value) {

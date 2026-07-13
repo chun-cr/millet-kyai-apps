@@ -19,17 +19,15 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/models/physique_question_models.dart';
 import '../../data/models/scan_session.dart';
 import '../../data/sources/physique_question_remote_source.dart';
-import '../utils/scan_upload_tenant_context.dart';
+import '../../data/sources/scan_remote_source.dart';
+import '../services/physique_question_flow_controller.dart';
+import '../services/physique_question_report_view_builder.dart';
 
 part 'physique_question_widgets.dart';
 
 const _kQuestionBgColor = Color(0xFFF4F1EB);
 const _kQuestionPrimary = Color(0xFF2D6A4F);
 const _kQuestionPrimaryLight = Color(0xFF3DAB78);
-const _kDefaultPhysiqueQuestionCategory = String.fromEnvironment(
-  'PHYSIQUE_QUESTION_CATEGORY',
-  defaultValue: 'tzpd',
-);
 
 typedef ProfileLoader = Future<ProfileMeEntity?> Function(BuildContext context);
 typedef AppIdMappingLoader =
@@ -45,7 +43,6 @@ class PhysiqueQuestionPage extends StatefulWidget {
     this.profileLoader,
     this.appIdMappingLoader,
     this.navigateToReport,
-    this.physiqueCategoryOverride,
   });
 
   final PhysiqueQuestionRemoteSource? remoteSource;
@@ -53,7 +50,6 @@ class PhysiqueQuestionPage extends StatefulWidget {
   final ProfileLoader? profileLoader;
   final AppIdMappingLoader? appIdMappingLoader;
   final ReportNavigator? navigateToReport;
-  final String? physiqueCategoryOverride;
 
   @override
   State<PhysiqueQuestionPage> createState() => _PhysiqueQuestionPageState();
@@ -62,8 +58,8 @@ class PhysiqueQuestionPage extends StatefulWidget {
 class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
   late final PhysiqueQuestionRemoteSource _remoteSource;
   late final ScanSession _scanSession;
+  late final PhysiqueQuestionFlowController _flowController;
 
-  PhysiqueQuestionRequestContext? _requestContext;
   PhysiqueQuestionPayload? _question;
   Object? _error;
   String? _selectedOptionValue;
@@ -81,6 +77,12 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     _remoteSource =
         widget.remoteSource ?? PhysiqueQuestionRemoteSource(getIt<DioClient>());
     _scanSession = widget.scanSession ?? getIt<ScanSession>();
+    _flowController = PhysiqueQuestionFlowController(
+      remoteSource: _remoteSource,
+      scanSession: _scanSession,
+      profileLoader: () => _loadProfile(),
+      appIdMappingLoader: () => _loadAppIdMapping(),
+    );
     unawaited(_bootstrap());
   }
 
@@ -90,16 +92,10 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       _error = null;
     });
     try {
-      final requestContext = await _buildRequestContext();
-      if (!mounted) {
-        return;
-      }
-      _requestContext = requestContext;
-      await _requestNextQuestion(
-        nextAnswers: _answers,
-        amenorrhea: _amenorrhea,
-        showFullScreenLoading: true,
+      final snapshot = await _flowController.ensureFirstQuestion(
+        allowReadinessRetry: true,
       );
+      await _applyQuestionSnapshot(snapshot);
     } on Object catch (error, stackTrace) {
       AppLogger.log(
         'Failed to bootstrap physique questions: $error\n$stackTrace',
@@ -112,39 +108,6 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
         _isLoading = false;
       });
     }
-  }
-
-  Future<PhysiqueQuestionRequestContext> _buildRequestContext() async {
-    final profile = await _loadProfile();
-    final appIdMapping = await _loadAppIdMapping();
-    final tenantContext = resolveScanUploadTenantContext(appIdMapping);
-
-    final detectedGender = _scanSession.detectedGender;
-    final resolvedGender = _resolveGender(profile?.gender, detectedGender);
-    if (resolvedGender.isEmpty) {
-      throw StateError('Missing gender for physique questionnaire.');
-    }
-
-    final resolvedPhysiqueCategory = _resolvePhysiqueCategory();
-    if (resolvedPhysiqueCategory.isEmpty) {
-      throw StateError('Missing phyCategory for physique questionnaire.');
-    }
-
-    return PhysiqueQuestionRequestContext(
-      age: _scanSession.detectedAge,
-      clinicId: tenantContext.clinicId,
-      gender: resolvedGender,
-      medicalCaseId: _scanSession.medicalCaseId,
-      name: _resolveName(profile),
-      phone: _resolvePhone(profile),
-      phyCategory: resolvedPhysiqueCategory,
-      storeId: tenantContext.storeId,
-      t: _scanSession.nextQuestionT,
-      tenantId: tenantContext.tenantId,
-      key: _scanSession.nextQuestionKey,
-      tongueReportId: _scanSession.tongueReportId,
-      topOrgId: tenantContext.topOrgId,
-    );
   }
 
   Future<ProfileMeEntity?> _loadProfile() async {
@@ -187,83 +150,13 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     }
   }
 
-  String _resolveGender(String? profileGender, String detectedGender) {
-    final normalizedProfileGender = _normalizeGender(profileGender);
-    if (normalizedProfileGender.isNotEmpty) {
-      return normalizedProfileGender;
-    }
-
-    final normalizedDetectedGender = _normalizeGender(detectedGender);
-    if (normalizedDetectedGender.isNotEmpty) {
-      return normalizedDetectedGender;
-    }
-
-    return profileGender?.trim().isNotEmpty == true
-        ? profileGender!.trim()
-        : detectedGender.trim();
-  }
-
-  String _normalizeGender(String? rawValue) {
-    final value = rawValue?.trim();
-    if (value == null || value.isEmpty) {
-      return '';
-    }
-    switch (value.toLowerCase()) {
-      case 'male':
-      case 'man':
-      case 'm':
-      case 'boy':
-      case '男':
-        return 'M';
-      case 'female':
-      case 'woman':
-      case 'f':
-      case 'girl':
-      case '女':
-        return 'F';
-      default:
-        return value;
-    }
-  }
-
-  String _resolvePhysiqueCategory() {
-    final override = widget.physiqueCategoryOverride?.trim() ?? '';
-    if (override.isNotEmpty) {
-      return override;
-    }
-    final sessionValue = _scanSession.phyCategory.trim();
-    if (sessionValue.isNotEmpty) {
-      return sessionValue;
-    }
-    return _kDefaultPhysiqueQuestionCategory.trim();
-  }
-
-  String? _resolveName(ProfileMeEntity? profile) {
-    final values = <String?>[profile?.realName, profile?.nickname];
-    for (final value in values) {
-      final trimmed = value?.trim();
-      if (trimmed != null && trimmed.isNotEmpty) {
-        return trimmed;
-      }
-    }
-    return null;
-  }
-
-  String? _resolvePhone(ProfileMeEntity? profile) {
-    final trimmed = profile?.phone?.trim();
-    return trimmed == null || trimmed.isEmpty ? null : trimmed;
-  }
-
   Future<void> _requestNextQuestion({
     required List<PhysiqueQuestionRequestAnswer> nextAnswers,
     required String? amenorrhea,
     required bool showFullScreenLoading,
+    bool allowReadinessRetry = false,
+    List<Duration> readinessRetryDelays = questionBootstrapRetryDelays,
   }) async {
-    final requestContext = _requestContext;
-    if (requestContext == null) {
-      return;
-    }
-
     setState(() {
       _error = null;
       _isLoading = showFullScreenLoading;
@@ -271,45 +164,13 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     });
 
     try {
-      final envelope = await _remoteSource.fetchNextQuestion(
-        requestContext.buildRequest(
-          answers: nextAnswers,
-          amenorrhea: amenorrhea,
-        ),
+      final snapshot = await _flowController.requestNextQuestion(
+        nextAnswers: nextAnswers,
+        amenorrhea: amenorrhea,
+        allowReadinessRetry: allowReadinessRetry,
+        readinessRetryDelays: readinessRetryDelays,
       );
-      final result = PhysiqueQuestionFlowResult.fromData(envelope.data);
-      final nextReportId = result.reportId?.trim();
-      if (nextReportId != null && nextReportId.isNotEmpty) {
-        _scanSession.saveReportId(nextReportId);
-      }
-
-      if (result.isCompleted) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _answers = nextAnswers;
-          _amenorrhea = amenorrhea;
-          _question = null;
-          _selectedOptionValue = null;
-          _isLoading = false;
-          _isSubmitting = false;
-        });
-        await _navigateToReport(nextReportId ?? _scanSession.reportId);
-        return;
-      }
-
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _answers = nextAnswers;
-        _amenorrhea = amenorrhea;
-        _question = result.question;
-        _selectedOptionValue = null;
-        _isLoading = false;
-        _isSubmitting = false;
-      });
+      await _applyQuestionSnapshot(snapshot);
     } on Object catch (error, stackTrace) {
       AppLogger.log('Physique question request failed: $error\n$stackTrace');
       if (!mounted) {
@@ -323,32 +184,110 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
     }
   }
 
+  Future<void> _applyQuestionSnapshot(
+    PhysiqueQuestionFlowSnapshot snapshot,
+  ) async {
+    if (!mounted) {
+      return;
+    }
+
+    if (!snapshot.hasQuestion) {
+      final reportId = snapshot.completionReportId?.trim().isNotEmpty == true
+          ? snapshot.completionReportId!.trim()
+          : _scanSession.reportId?.trim();
+      if (reportId == null || reportId.isEmpty) {
+        throw const MissingReportIdException();
+      }
+      final initialViewData = buildPhysiqueQuestionCompletionReportViewData(
+        scanSession: _scanSession,
+        snapshot: snapshot,
+        reportId: reportId,
+      );
+      setState(() {
+        _answers = snapshot.answers;
+        _amenorrhea = snapshot.amenorrhea;
+        _question = null;
+        _selectedOptionValue = null;
+        _error = null;
+        _isLoading = false;
+        _isSubmitting = false;
+      });
+      await _navigateToReport(reportId, initialViewData: initialViewData);
+      return;
+    }
+
+    setState(() {
+      _answers = snapshot.answers;
+      _amenorrhea = snapshot.amenorrhea;
+      _question = snapshot.question;
+      _selectedOptionValue = null;
+      _error = null;
+      _isLoading = false;
+      _isSubmitting = false;
+    });
+  }
+
   Future<void> _submitCurrentAnswer() async {
+    if (_isSubmitting || _isLoading || _isNavigating) {
+      return;
+    }
+
     final question = _question;
-    final selectedOption = _selectedOption;
-    if (question == null || selectedOption == null || question.id == null) {
+    final selectedOptionValue = _selectedOptionValue;
+    if (question == null ||
+        selectedOptionValue == null ||
+        question.id == null) {
+      return;
+    }
+
+    await _submitAnswer(question: question, optionValue: selectedOptionValue);
+  }
+
+  void _handleOptionSelected(String value) {
+    if (_isSubmitting || _isLoading || _isNavigating) {
+      return;
+    }
+
+    final question = _question;
+    if (question == null) {
+      return;
+    }
+
+    setState(() => _selectedOptionValue = value);
+    if (question.isSingleChoice) {
+      unawaited(_submitAnswer(question: question, optionValue: value));
+    }
+  }
+
+  Future<void> _submitAnswer({
+    required PhysiqueQuestionPayload question,
+    required String optionValue,
+  }) async {
+    if (_isSubmitting || _isLoading || _isNavigating || question.id == null) {
       return;
     }
 
     final nextAmenorrhea = question.isAmenorrheaQuestion
-        ? selectedOption.value
+        ? optionValue
         : _amenorrhea;
-    final nextAnswers = <PhysiqueQuestionRequestAnswer>[
-      ..._answers,
-      PhysiqueQuestionRequestAnswer(
-        id: question.id!,
-        optionValue: selectedOption.value,
-      ),
-    ];
+    final nextAnswers = upsertPhysiqueQuestionAnswer(
+      _answers,
+      PhysiqueQuestionRequestAnswer(id: question.id!, optionValue: optionValue),
+    );
 
     await _requestNextQuestion(
       nextAnswers: nextAnswers,
       amenorrhea: nextAmenorrhea,
       showFullScreenLoading: false,
+      allowReadinessRetry: true,
+      readinessRetryDelays: questionSubmitRetryDelays,
     );
   }
 
-  Future<void> _navigateToReport(String? reportId) async {
+  Future<void> _navigateToReport(
+    String? reportId, {
+    Object? initialViewData,
+  }) async {
     if (_isNavigating || !mounted) {
       return;
     }
@@ -370,34 +309,33 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
       if (!mounted) {
         return;
       }
-      context.go(location);
+      context.go(location, extra: initialViewData);
     } finally {
       _isNavigating = false;
     }
   }
 
   void _handleSkip() {
-    unawaited(_navigateToReport(_scanSession.reportId));
-  }
-
-  PhysiqueQuestionOption? get _selectedOption {
-    final selectedValue = _selectedOptionValue;
-    final question = _question;
-    if (selectedValue == null || question == null) {
-      return null;
+    final reportId = _scanSession.reportId?.trim();
+    if (reportId == null || reportId.isEmpty) {
+      setState(() {
+        _error = const MissingReportIdException();
+        _question = null;
+        _isLoading = false;
+        _isSubmitting = false;
+      });
+      return;
     }
-    for (final option in question.options) {
-      if (option.value == selectedValue) {
-        return option;
-      }
-    }
-    return null;
+    unawaited(_navigateToReport(reportId));
   }
 
   String _errorMessage(AppLocalizations l10n) {
     final error = _error;
     if (error == null) {
       return l10n.scanQuestionLoadFailed;
+    }
+    if (error is ScanUploadException && error.isAuthenticationFailure) {
+      return '登录状态已失效，请重新登录后再试。';
     }
     final message = error.toString().trim();
     if (message.isEmpty) {
@@ -452,12 +390,10 @@ class _PhysiqueQuestionPageState extends State<PhysiqueQuestionPage> {
                         selectedOptionValue: _selectedOptionValue,
                         isSubmitting: _isSubmitting,
                         hasSelection: _hasSelection,
-                        onOptionSelected: (value) {
-                          if (_isSubmitting) {
-                            return;
-                          }
-                          setState(() => _selectedOptionValue = value);
-                        },
+                        submissionErrorMessage: _error == null
+                            ? null
+                            : _errorMessage(l10n),
+                        onOptionSelected: _handleOptionSelected,
                         onSubmit: _submitCurrentAnswer,
                       ),
               ),

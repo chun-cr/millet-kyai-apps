@@ -42,6 +42,7 @@ class ScanTongueUploadResult {
 
   final Map<String, dynamic> data;
 
+  String get imageId => _asString(data['imageId']).trim();
   String get imageUrl => _asString(data['imageUrl']);
 
   Map<String, dynamic> get analysisResult => _asMap(data['analysisResult']);
@@ -51,18 +52,9 @@ class ScanTongueUploadResult {
   Map<String, dynamic> get result => _asMap(data['result']);
   Map<String, dynamic> get tongueReport => _asMap(data['tongueReport']);
 
-  String get reportId => _firstNonEmptyString(<Object?>[
-    data['reportId'],
-    analysisResult['reportId'],
-    tongueReport['reportId'],
-    report['reportId'],
-    report['id'],
-    result['reportId'],
-    diagnosisReport['reportId'],
-    diagnosisReport['id'],
-    medicalCase['reportId'],
-    data['id'],
-  ]);
+  String get requestId =>
+      _firstNonEmptyString(<Object?>[data['requestId'], data['_requestId']]);
+  String get reportId => _asString(tongueReport['reportId']).trim();
   int? get tongueReportId => _firstInt(<Object?>[
     data['tongueReportId'],
     tongueReport['tongueReportId'],
@@ -112,14 +104,30 @@ class ScanTongueUploadResult {
       nextQuestionKey.isNotEmpty ||
       phyCategory.isNotEmpty;
 
+  bool get analysisSucceeded => _asBool(analysisResult['success']) == true;
+
+  bool get hasDetectedTongue => _asBool(analysisResult['hasTongue']) == true;
+
+  bool get tongueReportSucceeded => _asBool(tongueReport['success']) == true;
+
+  bool get hasGeneratedReport =>
+      analysisSucceeded &&
+      hasDetectedTongue &&
+      tongueReportSucceeded &&
+      reportId.isNotEmpty;
+
+  bool get reportGenerationFailed =>
+      analysisSucceeded &&
+      hasDetectedTongue &&
+      (!tongueReportSucceeded || reportId.isEmpty);
+
   bool get missingTongue {
-    return analysisResult['success'] == true &&
-        analysisResult['hasTongue'] == false;
+    return analysisSucceeded && _asBool(analysisResult['hasTongue']) == false;
   }
 
   bool get analysisFailed {
     return analysisResult.containsKey('success') &&
-        analysisResult['success'] != true;
+        _asBool(analysisResult['success']) != true;
   }
 }
 
@@ -156,6 +164,25 @@ num? _asNum(Object? value) {
   }
   if (value is String) {
     return num.tryParse(value);
+  }
+  return null;
+}
+
+bool? _asBool(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is num) {
+    return value != 0;
+  }
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'true' || normalized == '1') {
+      return true;
+    }
+    if (normalized == 'false' || normalized == '0') {
+      return false;
+    }
   }
   return null;
 }

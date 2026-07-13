@@ -31,8 +31,6 @@ class _RefreshAttemptResult {
 class AuthInterceptor extends Interceptor {
   static const _retryAfterRefreshKey = 'retry_after_token_refresh';
   static const _skipTokenRefreshKey = 'skip_token_refresh';
-  static const _allowUnsafeRetryAfterRefreshKey =
-      'allow_unsafe_retry_after_token_refresh';
   static const _proactiveRefreshThreshold = Duration(minutes: 1);
   static const _retryableMethods = <String>{'GET', 'HEAD', 'OPTIONS'};
 
@@ -43,14 +41,77 @@ class AuthInterceptor extends Interceptor {
   }
 
   bool _canRetryAfterRefresh(RequestOptions options) {
-    if (options.extra[_allowUnsafeRetryAfterRefreshKey] == true) {
+    if (options.extra[DioClient.allowUnsafeRetryAfterTokenRefreshExtraKey] ==
+        true) {
       return true;
     }
     return _retryableMethods.contains(options.method.toUpperCase());
   }
 
+  bool _isAuthFailureResponse(Response<dynamic>? response) {
+    final statusCode = response?.statusCode;
+    if (statusCode == 401 || statusCode == 403) {
+      return true;
+    }
+
+    final data = response?.data;
+    final envelope = data is Map<String, dynamic>
+        ? data
+        : data is Map
+        ? Map<String, dynamic>.from(data)
+        : null;
+    if (envelope == null) {
+      return false;
+    }
+
+    final businessCode = (envelope['code'] as num?)?.toInt();
+    if (businessCode == 401 ||
+        (businessCode != null &&
+            businessCode >= 40100 &&
+            businessCode < 40200)) {
+      return true;
+    }
+
+    final messageKey = envelope['messageKey']?.toString().trim().toUpperCase();
+    if (messageKey != null &&
+        messageKey.isNotEmpty &&
+        messageKey.startsWith('AUTH_')) {
+      return true;
+    }
+
+    final message = envelope['message']?.toString().trim().toLowerCase();
+    return message == '未登录' ||
+        message == '未登陆' ||
+        message == 'unauthorized' ||
+        message == 'not logged in' ||
+        message == 'refresh token expired' ||
+        message == 'access token expired' ||
+        message == 'token expired';
+  }
+
+  Object? _retryData(Object? data) {
+    if (data is FormData) {
+      return data.clone();
+    }
+    return data;
+  }
+
   bool _shouldSkipAuthorizationHeader(RequestOptions options) {
     return options.extra[DioClient.skipAuthorizationHeaderExtraKey] == true;
+  }
+
+  bool _shouldAttemptRefreshForAuthFailure(
+    RequestOptions options,
+    Response<dynamic>? response,
+  ) {
+    return _isAuthFailureResponse(response) &&
+        options.extra[_skipTokenRefreshKey] != true &&
+        !_shouldSkipAuthorizationHeader(options) &&
+        options.extra[_retryAfterRefreshKey] != true &&
+        !_isAuthPath(options) &&
+        _canRetryAfterRefresh(options) &&
+        getIt.isRegistered<AuthSessionStore>() &&
+        getIt.isRegistered<DioClient>();
   }
 
   Future<_RefreshAttemptResult> _refreshSession() {
@@ -145,6 +206,38 @@ class AuthInterceptor extends Interceptor {
     }
   }
 
+  Future<Response<dynamic>?> _refreshAndRetry(RequestOptions options) async {
+    final sessionStore = getIt<AuthSessionStore>();
+
+    final refreshResult = await _refreshSession();
+    if (!refreshResult.refreshed) {
+      if (refreshResult.terminalFailure) {
+        await _invalidateSession();
+      }
+      return null;
+    }
+
+    final authorization = await sessionStore.authorizationHeader();
+    if (authorization == null) {
+      await _invalidateSession();
+      return null;
+    }
+
+    final retryOptions = options.copyWith(
+      data: _retryData(options.data),
+      headers: Map<String, dynamic>.from(options.headers)
+        ..['Authorization'] = authorization,
+    );
+    retryOptions.extra[_retryAfterRefreshKey] = true;
+
+    final dio = getIt<DioClient>().dio;
+    final retryResponse = await dio.fetch<dynamic>(retryOptions);
+    if (_isAuthFailureResponse(retryResponse)) {
+      await _invalidateSession();
+    }
+    return retryResponse;
+  }
+
   @override
   void onRequest(
     RequestOptions options,
@@ -193,54 +286,53 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
-    final requestOptions = err.requestOptions;
-    final statusCode = err.response?.statusCode;
-    final skipRefresh = requestOptions.extra[_skipTokenRefreshKey] == true;
-    final alreadyRetried = requestOptions.extra[_retryAfterRefreshKey] == true;
-
-    if (statusCode != 401 ||
-        skipRefresh ||
-        _shouldSkipAuthorizationHeader(requestOptions) ||
-        alreadyRetried ||
-        _isAuthPath(requestOptions) ||
-        !_canRetryAfterRefresh(requestOptions) ||
-        !getIt.isRegistered<AuthSessionStore>() ||
-        !getIt.isRegistered<DioClient>()) {
-      handler.next(err);
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) async {
+    final requestOptions = response.requestOptions;
+    if (!_shouldAttemptRefreshForAuthFailure(requestOptions, response)) {
+      handler.next(response);
       return;
     }
 
-    final sessionStore = getIt<AuthSessionStore>();
-
-    final refreshResult = await _refreshSession();
-    if (!refreshResult.refreshed) {
-      if (refreshResult.terminalFailure) {
-        await _invalidateSession();
-      }
-      handler.next(err);
-      return;
-    }
-
-    final authorization = await sessionStore.authorizationHeader();
-    if (authorization == null) {
-      await _invalidateSession();
-      handler.next(err);
-      return;
-    }
-
-    final retryOptions = requestOptions.copyWith(
-      headers: Map<String, dynamic>.from(requestOptions.headers)
-        ..['Authorization'] = authorization,
-    );
-    retryOptions.extra[_retryAfterRefreshKey] = true;
-
-    final dio = getIt<DioClient>().dio;
     try {
-      final retryResponse = await dio.fetch<dynamic>(retryOptions);
+      final retryResponse = await _refreshAndRetry(requestOptions);
+      if (retryResponse == null) {
+        handler.next(response);
+        return;
+      }
       handler.resolve(retryResponse);
     } on DioException catch (retryError) {
-      if (retryError.response?.statusCode == 401) {
+      if (_isAuthFailureResponse(retryError.response)) {
+        await _invalidateSession();
+      }
+      handler.reject(retryError);
+    } on Object catch (error) {
+      AppLogger.log(
+        'Retried request failed after token refresh for ${requestOptions.path}: $error',
+      );
+      handler.next(response);
+    }
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    final requestOptions = err.requestOptions;
+    if (!_shouldAttemptRefreshForAuthFailure(requestOptions, err.response)) {
+      handler.next(err);
+      return;
+    }
+
+    try {
+      final retryResponse = await _refreshAndRetry(requestOptions);
+      if (retryResponse == null) {
+        handler.next(err);
+        return;
+      }
+      handler.resolve(retryResponse);
+    } on DioException catch (retryError) {
+      if (_isAuthFailureResponse(retryError.response)) {
         await _invalidateSession();
       }
       handler.next(retryError);

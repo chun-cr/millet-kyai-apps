@@ -101,6 +101,7 @@ class ReportPage extends StatelessWidget {
   const ReportPage({
     super.key,
     this.reportId,
+    this.initialViewData,
     this.loadReportViewData,
     this.loadConsultNavigate,
     this.addReportSymptom,
@@ -109,6 +110,7 @@ class ReportPage extends StatelessWidget {
   });
 
   final String? reportId;
+  final ReportViewData? initialViewData;
   final Future<ReportViewData> Function(String reportId)? loadReportViewData;
   final Future<DiagnosisMaNavigate?> Function(ReportViewData viewData)?
   loadConsultNavigate;
@@ -120,6 +122,7 @@ class ReportPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ReportEntryResolver(
       reportId: reportId,
+      initialViewData: initialViewData,
       loadReportViewData: loadReportViewData,
       loadConsultNavigate: loadConsultNavigate,
       buildReportScreen: (key, viewData) => _ReportScreen(

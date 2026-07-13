@@ -56,6 +56,32 @@ class ScanUploadException implements Exception {
   final String? requestId;
   final Object? responseBody;
 
+  bool get isAuthenticationFailure {
+    if (statusCode == 401 || statusCode == 403) {
+      return true;
+    }
+    final code = businessCode;
+    if (code == 401 || (code != null && code >= 40100 && code < 40200)) {
+      return true;
+    }
+
+    final normalizedMessageKey = messageKey?.trim().toUpperCase();
+    if (normalizedMessageKey != null &&
+        normalizedMessageKey.isNotEmpty &&
+        normalizedMessageKey.startsWith('AUTH_')) {
+      return true;
+    }
+
+    final normalizedMessage = message.trim().toLowerCase();
+    return normalizedMessage == '未登录' ||
+        normalizedMessage == '未登陆' ||
+        normalizedMessage == 'unauthorized' ||
+        normalizedMessage == 'not logged in' ||
+        normalizedMessage == 'refresh token expired' ||
+        normalizedMessage == 'access token expired' ||
+        normalizedMessage == 'token expired';
+  }
+
   String get debugDescription {
     final buffer = StringBuffer()
       ..writeln('stage: $stage')
@@ -105,6 +131,7 @@ class ScanRemoteSource {
   static const _scanUploadReceiveTimeout = Duration(seconds: 120);
   static const _scanUploadRequestExtra = <String, dynamic>{
     DioClient.skipPlatformHeadersExtraKey: true,
+    DioClient.allowUnsafeRetryAfterTokenRefreshExtraKey: true,
   };
 
   final DioClient _dioClient;
@@ -185,18 +212,24 @@ class ScanRemoteSource {
   Future<ScanPalmUploadResult> uploadPalm({
     required String handFilePath,
     String? handFrameFilePath,
-    String? reportId,
+    required String reportId,
     ProgressCallback? onSendProgress,
   }) async {
     const path = '/api/v1/saas/mobile/ai/diagnosis/upload/hand';
-    final normalizedReportId = reportId?.trim();
+    final normalizedReportId = reportId.trim();
+    if (normalizedReportId.isEmpty) {
+      throw const ScanUploadException(
+        stage: 'palm',
+        path: path,
+        message: '报告ID缺失，无法上传手诊。',
+      );
+    }
     final payload = await _postMultipart(
       stage: 'palm',
       path: path,
       allowEmptyPayload: true,
       data: FormData.fromMap({
-        if (normalizedReportId != null && normalizedReportId.isNotEmpty)
-          'reportId': normalizedReportId,
+        'reportId': normalizedReportId,
         'handFile': await MultipartFile.fromFile(
           handFilePath,
           filename: _fileName(handFilePath),
@@ -295,7 +328,11 @@ class ScanRemoteSource {
         responseBody: envelope,
       );
     }
-    return payload;
+    final requestId = envelope['requestId']?.toString().trim();
+    if (requestId == null || requestId.isEmpty) {
+      return payload;
+    }
+    return <String, dynamic>{...payload, '_requestId': requestId};
   }
 
   String _fileName(String path) {

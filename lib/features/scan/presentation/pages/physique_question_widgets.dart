@@ -98,6 +98,7 @@ class _QuestionCard extends StatelessWidget {
     required this.selectedOptionValue,
     required this.isSubmitting,
     required this.hasSelection,
+    required this.submissionErrorMessage,
     required this.onOptionSelected,
     required this.onSubmit,
   });
@@ -108,6 +109,7 @@ class _QuestionCard extends StatelessWidget {
   final String? selectedOptionValue;
   final bool isSubmitting;
   final bool hasSelection;
+  final String? submissionErrorMessage;
   final ValueChanged<String> onOptionSelected;
   final Future<void> Function() onSubmit;
 
@@ -127,6 +129,8 @@ class _QuestionCard extends StatelessWidget {
         resolvedQuestion.currentIndex != null &&
         resolvedQuestion.totalCount != null &&
         resolvedQuestion.currentIndex! >= resolvedQuestion.totalCount!;
+    final requiresExplicitSubmit = !resolvedQuestion.isSingleChoice;
+    final resolvedSubmissionError = submissionErrorMessage?.trim() ?? '';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -221,17 +225,66 @@ class _QuestionCard extends StatelessWidget {
                     backgroundColor: Color(0xFFE5EFE9),
                   ),
                 ),
-              _PrimaryQuestionButton(
-                key: const ValueKey('scan_question_submit_button'),
-                label: isLastQuestion
-                    ? l10n.scanQuestionSubmitAndReport
-                    : l10n.scanQuestionNextButton,
-                enabled: hasSelection && !isSubmitting,
-                onTap: onSubmit,
-              ),
+              if (resolvedSubmissionError.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _QuestionInlineError(message: resolvedSubmissionError),
+                ),
+              if (requiresExplicitSubmit)
+                _PrimaryQuestionButton(
+                  key: const ValueKey('scan_question_submit_button'),
+                  label: isLastQuestion
+                      ? l10n.scanQuestionSubmitAndReport
+                      : l10n.scanQuestionNextButton,
+                  enabled: hasSelection && !isSubmitting,
+                  onTap: onSubmit,
+                ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _QuestionInlineError extends StatelessWidget {
+  const _QuestionInlineError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFB36A4C).withValues(alpha: 0.18),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: Color(0xFFB36A4C),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Color(0xFF7A4B38),
+                fontSize: 12,
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

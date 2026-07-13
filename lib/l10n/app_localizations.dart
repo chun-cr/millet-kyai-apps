@@ -2829,8 +2829,68 @@ abstract class AppLocalizations {
   /// No description provided for @reportCausalAnalysisTitle.
   ///
   /// In zh, this message translates to:
-  /// **'分析成因'**
+  /// **'体质分析'**
   String get reportCausalAnalysisTitle;
+
+  /// No description provided for @reportPhysiqueAnalysisLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取体质分析内容...'**
+  String get reportPhysiqueAnalysisLoading;
+
+  /// No description provided for @reportPhysiqueAnalysisFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'体质分析内容暂未加载成功，请稍后重试。'**
+  String get reportPhysiqueAnalysisFailed;
+
+  /// No description provided for @reportPhysiqueAnalysisEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无体质分析内容。'**
+  String get reportPhysiqueAnalysisEmpty;
+
+  /// No description provided for @reportPhysiqueAnalysisMainFeatureLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主要特征'**
+  String get reportPhysiqueAnalysisMainFeatureLabel;
+
+  /// No description provided for @reportPhysiqueAnalysisBodyFeatureLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'形体特征'**
+  String get reportPhysiqueAnalysisBodyFeatureLabel;
+
+  /// No description provided for @reportPhysiqueAnalysisManifestationsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'常见表现'**
+  String get reportPhysiqueAnalysisManifestationsLabel;
+
+  /// No description provided for @reportPhysiqueAnalysisDiseaseTendenciesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'发病倾向'**
+  String get reportPhysiqueAnalysisDiseaseTendenciesLabel;
+
+  /// No description provided for @reportPhysiqueAnalysisDiseaseTendencyNoteLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'发病倾向说明'**
+  String get reportPhysiqueAnalysisDiseaseTendencyNoteLabel;
+
+  /// No description provided for @reportPhysiqueAnalysisPsychologicalFeatureLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'心理特征'**
+  String get reportPhysiqueAnalysisPsychologicalFeatureLabel;
+
+  /// No description provided for @reportPhysiqueAnalysisEnvironmentAdaptabilityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'对外界适应能力'**
+  String get reportPhysiqueAnalysisEnvironmentAdaptabilityLabel;
 
   /// No description provided for @reportCauseRoutine.
   ///
@@ -2937,7 +2997,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportBadHabitsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'不当的举动'**
+  /// **'体质解读'**
   String get reportBadHabitsTitle;
 
   /// No description provided for @reportBadHabitOverwork.
@@ -3117,7 +3177,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportMentalWellnessTitle.
   ///
   /// In zh, this message translates to:
-  /// **'精神养生'**
+  /// **'调养参考'**
   String get reportMentalWellnessTitle;
 
   /// No description provided for @reportMentalTipCalm.
@@ -3951,7 +4011,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportUnlockBenefitTherapy.
   ///
   /// In zh, this message translates to:
-  /// **'获得专属穴位方案、精神养生与四季调理建议'**
+  /// **'获得专属穴位方案、调养参考与四季调理建议'**
   String get reportUnlockBenefitTherapy;
 
   /// No description provided for @reportUnlockBenefitAdvice.
@@ -4053,13 +4113,13 @@ abstract class AppLocalizations {
   /// No description provided for @reportUnlockCausalAnalysisTitle.
   ///
   /// In zh, this message translates to:
-  /// **'解锁成因深度分析'**
+  /// **'解锁体质分析'**
   String get reportUnlockCausalAnalysisTitle;
 
   /// No description provided for @reportUnlockCausalAnalysisSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'查看体质成因与关键诱因。'**
+  /// **'查看主导体质特征与表现。'**
   String get reportUnlockCausalAnalysisSubtitle;
 
   /// No description provided for @reportUnlockDiseaseTendencyTitle.
@@ -4077,13 +4137,13 @@ abstract class AppLocalizations {
   /// No description provided for @reportUnlockBadHabitsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'解锁不当行为提示'**
+  /// **'解锁体质解读'**
   String get reportUnlockBadHabitsTitle;
 
   /// No description provided for @reportUnlockBadHabitsSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'查看需要调整的日常习惯。'**
+  /// **'查看体质解读内容。'**
   String get reportUnlockBadHabitsSubtitle;
 
   /// No description provided for @reportUnlockAcupuncturePointsTitle.
@@ -4101,13 +4161,13 @@ abstract class AppLocalizations {
   /// No description provided for @reportUnlockMentalWellnessTitle.
   ///
   /// In zh, this message translates to:
-  /// **'解锁精神养生建议'**
+  /// **'解锁调养参考'**
   String get reportUnlockMentalWellnessTitle;
 
   /// No description provided for @reportUnlockMentalWellnessSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'查看情绪调养与舒缓建议。'**
+  /// **'查看调养参考内容。'**
   String get reportUnlockMentalWellnessSubtitle;
 
   /// No description provided for @reportUnlockSeasonalCareTitle.
@@ -4179,7 +4239,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportPremiumTherapySubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'查看专属穴位、精神养生与四季调理建议。'**
+  /// **'查看专属穴位、调养参考与四季调理建议。'**
   String get reportPremiumTherapySubtitle;
 
   /// No description provided for @reportPremiumTherapyPreview1.
@@ -4437,7 +4497,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportConstitutionCausalTitle.
   ///
   /// In zh, this message translates to:
-  /// **'分析成因'**
+  /// **'体质分析'**
   String get reportConstitutionCausalTitle;
 
   /// No description provided for @reportConstitutionCauseRoutineTitle.
@@ -4545,7 +4605,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportConstitutionBadHabitsTitle.
   ///
   /// In zh, this message translates to:
-  /// **'不当的举动'**
+  /// **'体质解读'**
   String get reportConstitutionBadHabitsTitle;
 
   /// No description provided for @reportConstitutionHabitOverworkTitle.
@@ -4725,7 +4785,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportTherapyMentalTitle.
   ///
   /// In zh, this message translates to:
-  /// **'精神养生'**
+  /// **'调养参考'**
   String get reportTherapyMentalTitle;
 
   /// No description provided for @reportTherapyMentalCalmTitle.

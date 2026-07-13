@@ -147,6 +147,354 @@ String? _firstNonEmptyText(Map<String, dynamic> payload, List<String> keys) {
   return null;
 }
 
+Widget _buildPhysiqueAnalysisStatusCard(
+  BuildContext context,
+  _ReportPhysiqueAnalysisState state,
+) {
+  final l10n = context.l10n;
+  final message = switch (state.status) {
+    _ReportPhysiqueAnalysisStatus.loading => l10n.reportPhysiqueAnalysisLoading,
+    _ReportPhysiqueAnalysisStatus.failed => l10n.reportPhysiqueAnalysisFailed,
+    _ => l10n.reportPhysiqueAnalysisEmpty,
+  };
+  final color = switch (state.status) {
+    _ReportPhysiqueAnalysisStatus.loading => const Color(0xFF4A7FA8),
+    _ReportPhysiqueAnalysisStatus.failed => const Color(0xFFC06A3A),
+    _ => const Color(0xFFC9A84C),
+  };
+
+  return _SectionCard(
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline, size: 18, color: color),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            message,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.55,
+              color: const Color(0xFF3A3028).withValues(alpha: 0.62),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildPhysiqueAnalysisSectionCard(
+  BuildContext context,
+  _ReportPhysiqueAnalysisState state,
+  ReportPhysiqueAnalysisSectionData? section,
+) {
+  if (section == null ||
+      (section.title.isEmpty &&
+          section.sectionImageUrl.isEmpty &&
+          section.contents.isEmpty)) {
+    return _buildPhysiqueAnalysisStatusCard(context, state);
+  }
+
+  final sectionType = section.sectionType.toLowerCase();
+  final accentColor = _physiqueAnalysisSectionAccentColor(sectionType);
+  final fallbackTitle =
+      _nonEmpty(state.data?.name) ?? _nonEmpty(section.title) ?? '';
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _PhysiqueAnalysisSectionHero(
+        key: ValueKey('report_physique_analysis_section_hero_$sectionType'),
+        imageUrl: section.sectionImageUrl,
+        imageAlt: section.sectionImageAlt,
+        placeholderTitle: fallbackTitle,
+        accentColor: accentColor,
+      ),
+      if (section.contents.isNotEmpty) const SizedBox(height: 12),
+      ...List.generate(section.contents.length, (index) {
+        final content = section.contents[index];
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index < section.contents.length - 1 ? 8 : 0,
+          ),
+          child: _PhysiqueAnalysisContentItem(
+            key: ValueKey(
+              'report_physique_analysis_section_content_${sectionType}_$index',
+            ),
+            content: content,
+            accentColor: accentColor,
+            icon: _physiqueAnalysisContentIcon(sectionType, index),
+          ),
+        );
+      }),
+    ],
+  );
+}
+
+Color _physiqueAnalysisSectionAccentColor(String sectionType) {
+  return switch (sectionType) {
+    'interpretation' => const Color(0xFF6B5B95),
+    'conditioning_reference' => const Color(0xFF2D6A4F),
+    'diet_reference' => const Color(0xFFB96A3A),
+    _ => const Color(0xFF4A7FA8),
+  };
+}
+
+IconData _physiqueAnalysisContentIcon(String sectionType, int index) {
+  const interpretationIcons = [
+    Icons.menu_book_outlined,
+    Icons.accessibility_new_outlined,
+    Icons.health_and_safety_outlined,
+    Icons.psychology_outlined,
+  ];
+  const conditioningIcons = [
+    Icons.self_improvement_outlined,
+    Icons.nightlight_outlined,
+    Icons.directions_walk_outlined,
+    Icons.spa_outlined,
+  ];
+  const dietIcons = [
+    Icons.restaurant_outlined,
+    Icons.local_dining_outlined,
+    Icons.no_food_outlined,
+    Icons.menu_book_outlined,
+  ];
+
+  final icons = switch (sectionType) {
+    'interpretation' => interpretationIcons,
+    'conditioning_reference' => conditioningIcons,
+    'diet_reference' => dietIcons,
+    _ => interpretationIcons,
+  };
+  return icons[index % icons.length];
+}
+
+class _PhysiqueAnalysisSectionHero extends StatelessWidget {
+  const _PhysiqueAnalysisSectionHero({
+    super.key,
+    required this.imageUrl,
+    required this.imageAlt,
+    required this.placeholderTitle,
+    required this.accentColor,
+  });
+
+  final String imageUrl;
+  final String imageAlt;
+  final String placeholderTitle;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final semanticLabel =
+        _nonEmpty(imageAlt) ?? _nonEmpty(placeholderTitle) ?? '';
+    final hasImage = imageUrl.isNotEmpty;
+
+    return Semantics(
+      image: semanticLabel.isNotEmpty,
+      label: semanticLabel.isEmpty ? null : semanticLabel,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: AspectRatio(
+          aspectRatio: 1.84,
+          child: hasImage
+              ? Image.network(
+                  imageUrl,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  excludeFromSemantics: true,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) {
+                      return child;
+                    }
+                    return _PhysiqueAnalysisSectionImagePlaceholder(
+                      title: placeholderTitle,
+                      accentColor: accentColor,
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) =>
+                      _PhysiqueAnalysisSectionImagePlaceholder(
+                        title: placeholderTitle,
+                        accentColor: accentColor,
+                      ),
+                )
+              : _PhysiqueAnalysisSectionImagePlaceholder(
+                  key: const ValueKey(
+                    'report_physique_analysis_section_image_placeholder',
+                  ),
+                  title: placeholderTitle,
+                  accentColor: accentColor,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PhysiqueAnalysisSectionImagePlaceholder extends StatelessWidget {
+  const _PhysiqueAnalysisSectionImagePlaceholder({
+    super.key,
+    required this.title,
+    required this.accentColor,
+  });
+
+  final String title;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: accentColor.withValues(alpha: 0.06),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.image_outlined,
+              size: 21,
+              color: accentColor.withValues(alpha: 0.72),
+            ),
+          ),
+          if (title.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1E1810),
+                height: 1.3,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PhysiqueAnalysisContentItem extends StatelessWidget {
+  const _PhysiqueAnalysisContentItem({
+    super.key,
+    required this.content,
+    required this.accentColor,
+    required this.icon,
+  });
+
+  final ReportPhysiqueAnalysisContentData content;
+  final Color accentColor;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      borderColor: accentColor.withValues(alpha: 0.08),
+      shadowColor: accentColor.withValues(alpha: 0.035),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: accentColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (content.contentTitle.isNotEmpty) ...[
+                  Text(
+                    content.contentTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E1810),
+                      height: 1.35,
+                    ),
+                  ),
+                  if (content.contentText.isNotEmpty) const SizedBox(height: 4),
+                ],
+                if (content.contentText.isNotEmpty)
+                  Text(
+                    content.contentText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: const Color(0xFF3A3028).withValues(alpha: 0.66),
+                      height: 1.6,
+                    ),
+                  ),
+                if (content.imageUrl.isNotEmpty) ...[
+                  if (content.hasTextContent) const SizedBox(height: 10),
+                  _PhysiqueAnalysisNetworkImage(
+                    imageUrl: content.imageUrl,
+                    imageAlt: content.imageAlt,
+                    height: 112,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhysiqueAnalysisNetworkImage extends StatelessWidget {
+  const _PhysiqueAnalysisNetworkImage({
+    required this.imageUrl,
+    required this.imageAlt,
+    required this.height,
+  });
+
+  final String imageUrl;
+  final String imageAlt;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final alt = imageAlt.trim();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        imageUrl,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        semanticLabel: alt.isEmpty ? null : alt,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+          return Container(
+            height: height,
+            width: double.infinity,
+            color: const Color(0xFF2D6A4F).withValues(alpha: 0.05),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
 class _SmallBadge extends StatelessWidget {
   const _SmallBadge({required this.text, required this.color});
 

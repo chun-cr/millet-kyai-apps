@@ -156,10 +156,14 @@ void setPreviewAuthenticated(bool value) {
 
 // ─── 路由配置 ─────────────────────────────────────────────────────
 ReportPage _buildReportPage(GoRouterState state) {
+  final initialViewData = state.extra is ReportViewData
+      ? state.extra as ReportViewData
+      : null;
   final reportId =
       state.uri.queryParameters['reportId'] ??
-      (state.extra is String ? state.extra as String : null);
-  return ReportPage(reportId: reportId);
+      (state.extra is String ? state.extra as String : null) ??
+      initialViewData?.reportId;
+  return ReportPage(reportId: reportId, initialViewData: initialViewData);
 }
 
 /// 应用共享路由实例。

@@ -213,48 +213,6 @@ void main() {
     });
   });
 
-  group('shouldShowTongueProgressFeedback', () {
-    test('shows progress while the hold countdown is active', () {
-      expect(
-        shouldShowTongueProgressFeedback(
-          scanState: ScanState.scanning,
-          holdEligible: true,
-        ),
-        isTrue,
-      );
-    });
-
-    test('keeps progress visible while upload is running', () {
-      expect(
-        shouldShowTongueProgressFeedback(
-          scanState: ScanState.uploading,
-          holdEligible: false,
-        ),
-        isTrue,
-      );
-    });
-
-    test('keeps full progress visible during completed dwell', () {
-      expect(
-        shouldShowTongueProgressFeedback(
-          scanState: ScanState.completed,
-          holdEligible: false,
-        ),
-        isTrue,
-      );
-    });
-
-    test('hides progress before the tongue is ready to hold', () {
-      expect(
-        shouldShowTongueProgressFeedback(
-          scanState: ScanState.scanning,
-          holdEligible: false,
-        ),
-        isFalse,
-      );
-    });
-  });
-
   group('isTongueHoldAliveWithinGrace', () {
     test('returns true while the current frame is still hold-alive', () {
       expect(

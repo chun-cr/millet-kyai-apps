@@ -60,6 +60,7 @@ class _HistoryEntryResolverState extends State<HistoryEntryResolver> {
   static const int _defaultPageSize = 20;
 
   List<DiagnosisRecord> _records = const <DiagnosisRecord>[];
+  final Set<String> _pendingFaceImageRecordIds = <String>{};
   bool _isInitialLoading = false;
   bool _isLoadingMore = false;
   bool _hasMore = false;
@@ -85,6 +86,7 @@ class _HistoryEntryResolverState extends State<HistoryEntryResolver> {
 
   void _resetStateAndLoad() {
     _loadGeneration += 1;
+    _pendingFaceImageRecordIds.clear();
     _isLoadingMore = false;
     _loadError = null;
     _nextPageNo = 1;
@@ -123,6 +125,7 @@ class _HistoryEntryResolverState extends State<HistoryEntryResolver> {
         _loadError = null;
         _nextPageNo = pageNo + 1;
       });
+      _scheduleFaceImageResolution(page.records, generation);
     } catch (error) {
       if (!mounted || generation != _loadGeneration) {
         return;
@@ -170,7 +173,7 @@ class _HistoryEntryResolverState extends State<HistoryEntryResolver> {
           topOrgId: tenantContext.topOrgId,
           pageNo: pageNo,
           pageSize: _defaultPageSize,
-          resolveFaceImages: true,
+          resolveFaceImages: false,
         );
 
     return HistoryRecordsPage(
@@ -199,6 +202,92 @@ class _HistoryEntryResolverState extends State<HistoryEntryResolver> {
       merged.add(record);
     }
     return merged;
+  }
+
+  bool get _usesDefaultHistoryLoader =>
+      widget.loadHistoryRecordsPage == null &&
+      widget.loadHistoryRecords == null;
+
+  void _scheduleFaceImageResolution(
+    List<DiagnosisRecord> records,
+    int generation,
+  ) {
+    if (!_usesDefaultHistoryLoader) {
+      return;
+    }
+
+    final candidates = <DiagnosisRecord>[];
+    for (final record in records) {
+      final id = record.id.trim();
+      if (id.isEmpty ||
+          record.faceImageUrl.trim().isNotEmpty ||
+          _pendingFaceImageRecordIds.contains(id)) {
+        continue;
+      }
+      _pendingFaceImageRecordIds.add(id);
+      candidates.add(record);
+    }
+
+    if (candidates.isEmpty) {
+      return;
+    }
+
+    unawaited(_resolveFaceImages(candidates, generation));
+  }
+
+  Future<void> _resolveFaceImages(
+    List<DiagnosisRecord> records,
+    int generation,
+  ) async {
+    final resolvedRecordsById = <String, DiagnosisRecord>{};
+    try {
+      final tenantContext = await tryLoadScanUploadTenantContext(
+        context,
+        initializeIfEmpty: true,
+      );
+      final source = ReportRemoteSource(getIt<DioClient>());
+
+      for (final record in records) {
+        if (!mounted || generation != _loadGeneration) {
+          return;
+        }
+
+        final id = record.id.trim();
+        try {
+          final detail = await source.getReportDetail(
+            id,
+            topOrgId: tenantContext.topOrgId,
+          );
+          final faceImageUrl = detail.faceAnalysisResult.imageUrl.trim();
+          if (faceImageUrl.isEmpty) {
+            continue;
+          }
+          resolvedRecordsById[id] = DiagnosisRecord.fromSummary(
+            record.rawSummary.copyWith(faceImageUrl: faceImageUrl),
+          );
+        } catch (_) {
+          // Missing preview images should never block the history list itself.
+        }
+      }
+    } catch (_) {
+      return;
+    } finally {
+      for (final record in records) {
+        _pendingFaceImageRecordIds.remove(record.id.trim());
+      }
+    }
+
+    if (!mounted ||
+        generation != _loadGeneration ||
+        resolvedRecordsById.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _records = _records
+          .map((record) => resolvedRecordsById[record.id] ?? record)
+          .toList(growable: false);
+    });
   }
 
   void _retry() {

@@ -2,11 +2,13 @@ part of '../report_page.dart';
 
 class _Tab3Therapy extends StatefulWidget {
   final ReportViewData viewData;
+  final _ReportPhysiqueAnalysisState physiqueAnalysisState;
   final bool isUnlocked;
   final Future<void> Function() onUnlock;
 
   const _Tab3Therapy({
     required this.viewData,
+    required this.physiqueAnalysisState,
     required this.isUnlocked,
     required this.onUnlock,
   });
@@ -120,7 +122,11 @@ class _Tab3TherapyState extends State<_Tab3Therapy> {
         if (snapshot.hasError) {
           return _buildAcupuncturePointsCard(
             context,
-            baseViewData.copyWith(statusText: '取穴数据暂未加载成功，先展示基础取穴建议。'),
+            baseViewData.copyWith(
+              intro: '取穴数据暂未加载成功，请稍后重试。',
+              points: const <_AcuPoint>[],
+              statusText: '取穴数据暂未加载成功，请稍后重试。',
+            ),
           );
         }
 
@@ -158,44 +164,46 @@ class _Tab3TherapyState extends State<_Tab3Therapy> {
                   : const Color(0xFFC9A84C),
             ),
           ],
-          const SizedBox(height: 14),
-          ...viewData.points.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _AcuPointCard(point: p),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFAF3E0),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFFC9A84C).withValues(alpha: 0.2),
-                width: 1,
+          if (viewData.points.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            ...viewData.points.map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _AcuPointCard(point: p),
               ),
             ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.info_outline,
-                  size: 14,
-                  color: Color(0xFFC9A84C),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF3E0),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFC9A84C).withValues(alpha: 0.2),
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.reportTherapyAcupointsWarning,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: const Color(0xFF8B6914).withValues(alpha: 0.8),
-                      height: 1.5,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: Color(0xFFC9A84C),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.reportTherapyAcupointsWarning,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: const Color(0xFF8B6914).withValues(alpha: 0.8),
+                        height: 1.5,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -203,6 +211,15 @@ class _Tab3TherapyState extends State<_Tab3Therapy> {
 
   // ── 精神养生 ─────────────────────────────────────────────────────
   Widget _buildMentalWellnessContent(BuildContext context) {
+    if (widget.viewData.isLive) {
+      final section = widget.physiqueAnalysisState.data?.conditioningReference;
+      return _buildPhysiqueAnalysisSectionCard(
+        context,
+        widget.physiqueAnalysisState,
+        section,
+      );
+    }
+
     final l10n = context.l10n;
     final tips = [
       (

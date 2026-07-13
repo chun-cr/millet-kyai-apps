@@ -104,6 +104,12 @@ void main() {
     return ScanRemoteSource(dioClient);
   }
 
+  ScanRemoteSource createRegisteredSource(_QueueHttpClientAdapter adapter) {
+    final dioClient = getIt<DioClient>();
+    dioClient.dio.httpClientAdapter = adapter;
+    return ScanRemoteSource(dioClient);
+  }
+
   test('uploadFace posts to the face upload endpoint', () async {
     final file = await createFile('face.jpg');
     final frameFile = await createFile('face-mask.png');
@@ -204,6 +210,61 @@ void main() {
   );
 
   test(
+    'scan uploads refresh and retry once when the access token is stale',
+    () async {
+      await seedSession(
+        const AuthSessionEntity(
+          accessToken: 'stale-access',
+          refreshToken: 'refresh-token',
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+          scope: 'mobile',
+        ),
+      );
+      final file = await createFile('scan-face-retry.jpg');
+      final adapter = _QueueHttpClientAdapter(<_StubResponse>[
+        const _StubResponse(200, <String, dynamic>{
+          'code': 40101,
+          'message': '未登录',
+          'messageKey': 'AUTH_ACCESS_EXPIRED',
+        }),
+        const _StubResponse(200, <String, dynamic>{
+          'code': 0,
+          'data': <String, dynamic>{
+            'accessToken': 'fresh-access',
+            'refreshToken': 'fresh-refresh',
+            'tokenType': 'Bearer',
+            'expiresIn': 7200,
+            'scope': 'mobile',
+          },
+        }),
+        const _StubResponse(200, <String, dynamic>{
+          'code': 0,
+          'data': <String, dynamic>{},
+        }),
+      ]);
+      final source = createRegisteredSource(adapter);
+
+      await source.uploadFace(faceFilePath: file.path);
+
+      expect(adapter.requests.map((request) => request.path), <String>[
+        '/api/v1/saas/mobile/ai/diagnosis/upload/face',
+        '/api/v1/saas/mobile/auth/tokens/refresh',
+        '/api/v1/saas/mobile/ai/diagnosis/upload/face',
+      ]);
+      expect(
+        adapter.requests.first.headers['Authorization'],
+        'Bearer stale-access',
+      );
+      expect(
+        adapter.requests.last.headers['Authorization'],
+        'Bearer fresh-access',
+      );
+      expect(adapter.requests.last.data, isA<FormData>());
+    },
+  );
+
+  test(
     'uploadTongue throws detailed exception for business failure envelope',
     () async {
       final file = await createFile('tongue.jpg');
@@ -269,6 +330,35 @@ void main() {
     },
   );
 
+  test('uploadTongue keeps envelope requestId in the parsed payload', () async {
+    final file = await createFile('tongue-request-id.jpg');
+    final adapter = _QueueHttpClientAdapter(<_StubResponse>[
+      const _StubResponse(200, <String, dynamic>{
+        'code': 0,
+        'requestId': 'req-success',
+        'data': <String, dynamic>{
+          'analysisResult': <String, dynamic>{
+            'success': true,
+            'hasTongue': true,
+          },
+          'tongueReport': <String, dynamic>{
+            'success': true,
+            'reportId': 'report-123',
+          },
+        },
+      }),
+    ]);
+    final source = createSource(adapter);
+
+    final result = await source.uploadTongue(
+      imageFilePath: file.path,
+      faceUpload: fakeFaceUpload,
+    );
+
+    expect(result.requestId, 'req-success');
+    expect(result.hasGeneratedReport, isTrue);
+  });
+
   test(
     'uploadPalm posts hand and frame files to the hand upload endpoint',
     () async {
@@ -307,29 +397,21 @@ void main() {
     },
   );
 
-  test(
-    'uploadPalm omits reportId when the tongue stage has not returned one',
-    () async {
-      final file = await createFile('palm-no-report.jpg');
-      final adapter = _QueueHttpClientAdapter(<_StubResponse>[
-        const _StubResponse(200, <String, dynamic>{
-          'code': 0,
-          'data': <String, dynamic>{},
-        }),
-      ]);
-      final source = createSource(adapter);
+  test('uploadPalm requires reportId before posting hand files', () async {
+    final file = await createFile('palm-no-report.jpg');
+    final adapter = _QueueHttpClientAdapter(<_StubResponse>[]);
+    final source = createSource(adapter);
 
-      await source.uploadPalm(handFilePath: file.path);
-
-      final payload = adapter.requests.single.data as FormData;
-      final fields = Map<String, String>.fromEntries(payload.fields);
-      expect(fields, isNot(contains('reportId')));
-      expect(payload.files.map((entry) => entry.key), <String>[
-        'handFile',
-        'handFrameFile',
-      ]);
-    },
-  );
+    await expectLater(
+      () => source.uploadPalm(handFilePath: file.path, reportId: '  '),
+      throwsA(
+        isA<ScanUploadException>()
+            .having((error) => error.stage, 'stage', 'palm')
+            .having((error) => error.message, 'message', '报告ID缺失，无法上传手诊。'),
+      ),
+    );
+    expect(adapter.requests, isEmpty);
+  });
 
   test(
     'uploadPalm throws detailed exception for http failure response',

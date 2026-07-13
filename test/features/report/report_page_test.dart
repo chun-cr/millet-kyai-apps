@@ -60,11 +60,16 @@ Widget _buildFallbackReportPage(
   Widget Function(BuildContext context, GoRouterState state)? reportBuilder,
   required BuildContext context,
 }) {
+  final initialViewData = state.extra is ReportViewData
+      ? state.extra as ReportViewData
+      : null;
   return reportBuilder?.call(context, state) ??
       ReportPage(
         reportId:
             state.uri.queryParameters['reportId'] ??
-            (state.extra is String ? state.extra as String : null),
+            (state.extra is String ? state.extra as String : null) ??
+            initialViewData?.reportId,
+        initialViewData: initialViewData,
       );
 }
 
@@ -167,11 +172,18 @@ Future<GoRouter> _pumpReportRouter(
 void main() {
   String twoDigits(int value) => value.toString().padLeft(2, '0');
 
-  testWidgets('report page boots safely without reportId', (tester) async {
+  testWidgets('report page reports missing reportId instead of demo data', (
+    tester,
+  ) async {
     final router = await _pumpReportRouter(tester);
 
     expect(find.byType(ReportPage), findsOneWidget);
-    expect(find.byKey(const ValueKey('report_mode_demo')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('report_missing_report_id')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('报告ID缺失'), findsOneWidget);
+    expect(find.byKey(const ValueKey('report_mode_demo')), findsNothing);
     expect(tester.takeException(), isNull);
 
     router.dispose();
@@ -200,6 +212,59 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey('report_mode_live')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 250));
+
+    router.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('report page shows history summary while detail is loading', (
+    tester,
+  ) async {
+    final detailCompleter = Completer<ReportViewData>();
+    final summary = DiagnosisReportSummary(
+      id: 'history-report',
+      testTime: '2026-04-17 10:30',
+      healthScore: 76,
+      physiqueName: 'History Quick',
+      imageUrl: '',
+      faceImageUrl: '',
+      lockedStatus: '1',
+      deepPredicts: const DiagnosisDeepPredicts(
+        categoryProbabilities: <DiagnosisNamedProbability>[],
+        predictions: <DiagnosisNamedProbability>[],
+        diseases: <DiagnosisDisease>[],
+        raw: <String, dynamic>{},
+      ),
+      raw: const <String, dynamic>{},
+    );
+
+    final router = await _pumpReportRouter(
+      tester,
+      reportBuilder: (context, state) => ReportPage(
+        reportId: 'history-report',
+        initialViewData: ReportViewData.fromSummary(summary),
+        loadReportViewData: (_) => detailCompleter.future,
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('report_mode_live')), findsOneWidget);
+    expect(find.byKey(const ValueKey('report_loading')), findsNothing);
+    expect(find.text('History Quick'), findsWidgets);
+
+    detailCompleter.complete(
+      buildReportViewData(
+        id: 'history-report',
+        primaryConstitution: 'Loaded Detail',
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Loaded Detail'), findsWidgets);
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 250));
 
@@ -920,6 +985,210 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('physique analysis content is shared across live report tabs', (
+    tester,
+  ) async {
+    await getIt.reset();
+    AppIdentity.resetForTest();
+    final dioClient = DioClient();
+    final adapter = _ReportPageCaptureAdapter((options) {
+      if (options.path == '/api/v1/saas/mobile/physique/2/analysis') {
+        return _jsonResponse({
+          'code': 0,
+          'message': 'ok',
+          'data': {
+            'id': 2,
+            'name': '气虚质',
+            'standardVersion': '2026',
+            'mainFeature': '元气不足，容易疲乏。',
+            'bodyFeature': '肌肉松软，声音偏低。',
+            'psychologicalFeature': '性格偏内向，情绪起伏不大。',
+            'diseaseTendencyNote': '长期疲劳时需关注免疫力。',
+            'environmentAdaptability': '不耐寒暑，换季易不适。',
+            'manifestations': [
+              {'id': 'm2', 'name': '气短', 'sortNo': 2},
+              {'id': 1, 'name': '疲乏', 'sortNo': 1},
+            ],
+            'diseaseTendencies': [
+              {'id': 8, 'name': '易感冒', 'sortNo': 1},
+              {'id': '9', 'name': '内脏下垂倾向', 'sortNo': 2},
+            ],
+            'sections': [
+              {
+                'sectionType': 'diet_reference',
+                'title': '饮食参考',
+                'sortNo': 3,
+                'contents': [
+                  {
+                    'contentTitle': '饮食节律',
+                    'contentText': '少量多餐，优先温软易消化食物。',
+                    'sortNo': 1,
+                  },
+                ],
+              },
+              {
+                'sectionType': 'interpretation',
+                'title': '体质解读',
+                'sortNo': 1,
+                'contents': [
+                  {
+                    'contentTitle': '气虚解读',
+                    'contentText': '重点是补气健脾，减少持续透支。',
+                    'sortNo': 1,
+                  },
+                ],
+              },
+              {
+                'sectionType': 'conditioning_reference',
+                'title': '调养参考',
+                'sortNo': 2,
+                'contents': [
+                  {
+                    'contentTitle': '作息调养',
+                    'contentText': '保持固定入睡时间，避免连续熬夜。',
+                    'sortNo': 1,
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      }
+      if (options.path == '/api/v1/saas/mobile/physique/therapy') {
+        return _jsonResponse({
+          'code': 0,
+          'message': 'ok',
+          'data': {'therapies': const <Map<String, Object>>[]},
+        });
+      }
+      return _jsonResponse({'code': 0, 'message': 'ok', 'data': null});
+    });
+    dioClient.dio.httpClientAdapter = adapter;
+    getIt.registerSingleton<DioClient>(dioClient);
+    addTearDown(() async {
+      await getIt.reset();
+      AppIdentity.resetForTest();
+    });
+
+    final l10n = lookupAppLocalizations(const Locale('zh'));
+    final viewData = buildReportViewData(
+      constitutionScores: const [
+        {'id': '2', 'name': '气虚质', 'score': 82},
+        {'id': '1', 'name': '平和质', 'score': 32},
+      ],
+      categoryProbabilities: const [],
+    );
+    expect(viewData.isLive, isTrue);
+    expect(viewData.constitutionScores.first.id, '2');
+
+    final router = await _pumpReportRouter(
+      tester,
+      reportBuilder: (context, state) => ReportPage(
+        reportId: 'analysis-report',
+        loadReportViewData: (_) async => viewData,
+      ),
+    );
+    expect(find.byKey(const ValueKey('report_mode_live')), findsOneWidget);
+
+    await tester.tap(find.text(l10n.reportTabConstitution));
+    await tester.pumpAndSettle();
+    for (var attempt = 0; attempt < 20; attempt++) {
+      if (adapter.requests.any(
+        (request) => request.path == '/api/v1/saas/mobile/physique/2/analysis',
+      )) {
+        break;
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+    }
+    expect(
+      adapter.requests.map((request) => request.path),
+      contains('/api/v1/saas/mobile/physique/2/analysis'),
+    );
+    await tester.pumpAndSettle();
+    final interpretationHero = find.byKey(
+      const ValueKey('report_physique_analysis_section_hero_interpretation'),
+    );
+    expect(interpretationHero, findsOneWidget);
+    expect(
+      find.byKey(
+        const ValueKey('report_physique_analysis_section_image_placeholder'),
+      ),
+      findsOneWidget,
+    );
+    final interpretationHeroSize = tester.getSize(interpretationHero);
+    expect(
+      interpretationHeroSize.width / interpretationHeroSize.height,
+      closeTo(1.84, 0.01),
+    );
+    expect(
+      find.byKey(
+        const ValueKey(
+          'report_physique_analysis_section_content_interpretation_0',
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('体质分析'), findsOneWidget);
+    expect(find.text('主要特征'), findsOneWidget);
+    expect(find.text('元气不足，容易疲乏。'), findsOneWidget);
+    expect(find.textContaining('疲乏、气短'), findsOneWidget);
+    expect(find.textContaining('易感冒、内脏下垂倾向'), findsOneWidget);
+    expect(find.text('体质解读'), findsOneWidget);
+    expect(find.text('气虚解读'), findsOneWidget);
+    expect(find.text('重点是补气健脾，减少持续透支。'), findsOneWidget);
+    expect(find.text('作息'), findsNothing);
+    expect(find.text('过度劳累'), findsNothing);
+
+    await tester.tap(find.text(l10n.reportTabTherapy));
+    await tester.pumpAndSettle();
+    expect(find.text('调养参考'), findsOneWidget);
+    expect(find.text('作息调养'), findsOneWidget);
+    expect(find.text('保持固定入睡时间，避免连续熬夜。'), findsOneWidget);
+    expect(find.text('恬淡虚无'), findsNothing);
+
+    expect(
+      find.byKey(
+        const ValueKey(
+          'report_physique_analysis_section_hero_conditioning_reference',
+        ),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text(l10n.reportTabAdvice));
+    await tester.pumpAndSettle();
+    expect(find.text('饮食建议'), findsOneWidget);
+    expect(find.text('饮食节律'), findsOneWidget);
+    expect(find.text('少量多餐，优先温软易消化食物。'), findsOneWidget);
+    expect(find.text('山药'), findsNothing);
+    expect(find.text('薏仁'), findsNothing);
+    expect(find.text('红枣'), findsNothing);
+
+    expect(
+      find.byKey(
+        const ValueKey('report_physique_analysis_section_hero_diet_reference'),
+      ),
+      findsOneWidget,
+    );
+
+    final analysisRequests = adapter.requests
+        .where(
+          (request) =>
+              request.path == '/api/v1/saas/mobile/physique/2/analysis',
+        )
+        .toList(growable: false);
+    expect(analysisRequests, hasLength(1));
+    expect(tester.takeException(), isNull);
+
+    router.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('risk section hides when there is no risk data', (tester) async {
     final router = await _pumpReportRouter(
       tester,
@@ -1309,7 +1578,14 @@ void main() {
   testWidgets('switching to advice tab reveals project and product actions', (
     tester,
   ) async {
-    final router = await _pumpReportRouter(tester);
+    final router = await _pumpReportRouter(
+      tester,
+      reportBuilder: (context, state) => ReportPage(
+        reportId: 'advice-report',
+        loadReportViewData: (_) async =>
+            ReportViewData.demo(reportId: 'advice-report'),
+      ),
+    );
     final l10n = lookupAppLocalizations(const Locale('zh'));
 
     await tester.tap(find.text(l10n.reportTabAdvice));
@@ -1327,7 +1603,14 @@ void main() {
   testWidgets('project detail route works from report advice tab', (
     tester,
   ) async {
-    final router = await _pumpReportRouter(tester);
+    final router = await _pumpReportRouter(
+      tester,
+      reportBuilder: (context, state) => ReportPage(
+        reportId: 'project-report',
+        loadReportViewData: (_) async =>
+            ReportViewData.demo(reportId: 'project-report'),
+      ),
+    );
     final l10n = lookupAppLocalizations(const Locale('zh'));
 
     await tester.tap(find.text(l10n.reportTabAdvice));
@@ -1380,7 +1663,14 @@ void main() {
   testWidgets(
     'product detail and checkout routes still work from report page',
     (tester) async {
-      final router = await _pumpReportRouter(tester);
+      final router = await _pumpReportRouter(
+        tester,
+        reportBuilder: (context, state) => ReportPage(
+          reportId: 'product-report',
+          loadReportViewData: (_) async =>
+              ReportViewData.demo(reportId: 'product-report'),
+        ),
+      );
       final l10n = lookupAppLocalizations(const Locale('zh'));
 
       await tester.tap(find.text(l10n.reportTabAdvice));

@@ -28,17 +28,22 @@ class _RecordingPhysiqueQuestionRemoteSource
   }
 }
 
-class _ThrowingPhysiqueQuestionRemoteSource
-    extends PhysiqueQuestionRemoteSource {
-  _ThrowingPhysiqueQuestionRemoteSource(this._error) : super(DioClient());
+class _QueuePhysiqueQuestionRemoteSource extends PhysiqueQuestionRemoteSource {
+  _QueuePhysiqueQuestionRemoteSource(this._results) : super(DioClient());
 
-  final Object _error;
+  final List<Object> _results;
+  final List<PhysiqueQuestionRequest> requests = <PhysiqueQuestionRequest>[];
 
   @override
   Future<PhysiqueQuestionEnvelope> fetchNextQuestion(
     PhysiqueQuestionRequest request,
   ) async {
-    throw _error;
+    requests.add(request);
+    final result = _results.removeAt(0);
+    if (result is PhysiqueQuestionEnvelope) {
+      return result;
+    }
+    throw result;
   }
 }
 
@@ -47,7 +52,15 @@ Future<void> _pumpQuestionPage(
   required ScanSession scanSession,
   required PhysiqueQuestionRemoteSource remoteSource,
   required Future<void> Function(String? reportId) onNavigate,
-  String? physiqueCategoryOverride = 'PHY-TEST',
+  ProfileMeEntity? profile = const ProfileMeEntity(
+    realName: 'Test User',
+    phone: '13800000000',
+    gender: 'female',
+  ),
+  AppIdMappingEntity? appIdMapping = const AppIdMappingEntity(
+    topOrgId: '100',
+    clinicId: '200',
+  ),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -62,14 +75,8 @@ Future<void> _pumpQuestionPage(
       home: PhysiqueQuestionPage(
         remoteSource: remoteSource,
         scanSession: scanSession,
-        physiqueCategoryOverride: physiqueCategoryOverride,
-        profileLoader: (_) async => const ProfileMeEntity(
-          realName: '测试用户',
-          phone: '13800000000',
-          gender: 'female',
-        ),
-        appIdMappingLoader: (_) async =>
-            const AppIdMappingEntity(topOrgId: '100', clinicId: '200'),
+        profileLoader: (_) async => profile,
+        appIdMappingLoader: (_) async => appIdMapping,
         navigateToReport: (context, reportId) => onNavigate(reportId),
       ),
     ),
@@ -90,10 +97,55 @@ ScanSession _buildScanSession() {
   );
   session.saveTongueUpload(
     const ScanTongueUploadResult(<String, dynamic>{
-      'analysisResult': <String, dynamic>{},
+      'analysisResult': <String, dynamic>{'success': true, 'hasTongue': true},
       'tongueReport': <String, dynamic>{
+        'success': true,
         'reportId': 'report-123',
         'id': 789,
+        'medicalCaseId': 456,
+      },
+    }),
+  );
+  return session;
+}
+
+ScanSession _buildScanSessionWithoutReportId() {
+  final session = ScanSession();
+  session.saveFaceUpload(
+    const ScanFaceUploadResult(<String, dynamic>{
+      'faceNum': 1,
+      'imageId': 'face-image',
+      'imageUrl': 'https://example.com/face.png',
+      'age': 29,
+      'sex': 'F',
+    }),
+  );
+  session.saveTongueUpload(
+    const ScanTongueUploadResult(<String, dynamic>{
+      'analysisResult': <String, dynamic>{},
+      'tongueReport': <String, dynamic>{'id': 789, 'medicalCaseId': 456},
+    }),
+  );
+  return session;
+}
+
+ScanSession _buildScanSessionWithoutTongueReportId() {
+  final session = ScanSession();
+  session.saveFaceUpload(
+    const ScanFaceUploadResult(<String, dynamic>{
+      'faceNum': 1,
+      'imageId': 'face-image',
+      'imageUrl': 'https://example.com/face.png',
+      'age': 29,
+      'sex': 'F',
+    }),
+  );
+  session.saveTongueUpload(
+    const ScanTongueUploadResult(<String, dynamic>{
+      'analysisResult': <String, dynamic>{'success': true, 'hasTongue': true},
+      'tongueReport': <String, dynamic>{
+        'success': true,
+        'reportId': 'report-123',
         'medicalCaseId': 456,
       },
     }),
@@ -113,9 +165,9 @@ void main() {
           data: <String, dynamic>{
             'question': <String, dynamic>{
               'id': 11,
-              'title': '最近睡眠怎么样？',
+              'title': 'How have you been sleeping?',
               'options': <Map<String, String>>[
-                <String, String>{'optionValue': 'good', 'optionName': '挺好'},
+                <String, String>{'optionValue': 'good', 'optionName': 'Good'},
               ],
             },
           },
@@ -138,48 +190,105 @@ void main() {
     expect(navigatedReportId, 'report-123');
   });
 
-  testWidgets('bootstrap 404 shows question load error instead of skipping', (
+  testWidgets(
+    'bootstrap retries transient not-ready failure then shows question',
+    (tester) async {
+      final scanSession = _buildScanSession();
+      final remoteSource = _QueuePhysiqueQuestionRemoteSource(<Object>[
+        const ScanUploadException(
+          stage: 'physique_question',
+          path: '/api/v1/saas/physiques/next-question',
+          message: 'Not Found',
+          statusCode: 404,
+          messageKey: 'physique.question_not_ready',
+        ),
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 11,
+              'question': 'How have you been sleeping?',
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'good', 'text': 'Good'},
+              ],
+            },
+          },
+        ),
+      ]);
+
+      String? navigatedReportId;
+      await _pumpQuestionPage(
+        tester,
+        scanSession: scanSession,
+        remoteSource: remoteSource,
+        onNavigate: (reportId) async => navigatedReportId = reportId,
+      );
+      await tester.pump(const Duration(milliseconds: 301));
+      await tester.pumpAndSettle();
+
+      expect(navigatedReportId, isNull);
+      expect(remoteSource.requests, hasLength(2));
+      expect(find.text('How have you been sleeping?'), findsOneWidget);
+      expect(find.text('Good'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'bootstrap does not treat initial completed payload as skip to report',
+    (tester) async {
+      final scanSession = _buildScanSession();
+      final remoteSource = _QueuePhysiqueQuestionRemoteSource(<Object>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'result': <String, dynamic>{'reportId': 'report-final'},
+          },
+        ),
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 11,
+              'question': 'How have you been sleeping?',
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'good', 'text': 'Good'},
+              ],
+            },
+          },
+        ),
+      ]);
+
+      String? navigatedReportId;
+      await _pumpQuestionPage(
+        tester,
+        scanSession: scanSession,
+        remoteSource: remoteSource,
+        onNavigate: (reportId) async => navigatedReportId = reportId,
+      );
+      await tester.pump(const Duration(milliseconds: 301));
+      await tester.pumpAndSettle();
+
+      expect(navigatedReportId, isNull);
+      expect(remoteSource.requests, hasLength(2));
+      expect(find.text('How have you been sleeping?'), findsOneWidget);
+      expect(find.text('Good'), findsOneWidget);
+    },
+  );
+
+  testWidgets('bootstrap can request first question without tongueReportId', (
     tester,
   ) async {
-    final scanSession = _buildScanSession();
-    final remoteSource = _ThrowingPhysiqueQuestionRemoteSource(
-      const ScanUploadException(
-        stage: 'physique_question',
-        path: '/api/questionnaire',
-        message: 'Not Found',
-        statusCode: 404,
-      ),
-    );
-
-    String? navigatedReportId;
-    await _pumpQuestionPage(
-      tester,
-      scanSession: scanSession,
-      remoteSource: remoteSource,
-      onNavigate: (reportId) async => navigatedReportId = reportId,
-    );
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(milliseconds: 50));
-
-    expect(navigatedReportId, isNull);
-    expect(find.byKey(const ValueKey('scan_question_error')), findsOneWidget);
-    expect(find.textContaining('Not Found'), findsOneWidget);
-  });
-
-  testWidgets('bootstrap uses miniapp default physique category', (
-    tester,
-  ) async {
-    final scanSession = _buildScanSession();
+    final scanSession = _buildScanSessionWithoutTongueReportId();
     final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
       <PhysiqueQuestionEnvelope>[
         const PhysiqueQuestionEnvelope(
           code: 0,
           data: <String, dynamic>{
-            'question': <String, dynamic>{
+            'next': <String, dynamic>{
               'id': 11,
-              'title': '最近睡眠怎么样？',
+              'question': 'How have you been sleeping?',
               'options': <Map<String, String>>[
-                <String, String>{'optionValue': 'good', 'optionName': '挺好'},
+                <String, String>{'value': 'good', 'text': 'Good'},
               ],
             },
           },
@@ -192,19 +301,172 @@ void main() {
       scanSession: scanSession,
       remoteSource: remoteSource,
       onNavigate: (_) async {},
-      physiqueCategoryOverride: null,
     );
     await tester.pumpAndSettle();
 
     expect(remoteSource.requests, hasLength(1));
     expect(
       remoteSource.requests.single.toJson(),
-      containsPair('phyCategory', 'tzpd'),
+      isNot(contains('tongueReportId')),
+    );
+    expect(find.text('How have you been sleeping?'), findsOneWidget);
+  });
+
+  testWidgets('plain 404 is not retried as question readiness', (tester) async {
+    final scanSession = _buildScanSession();
+    final remoteSource = _QueuePhysiqueQuestionRemoteSource(<Object>[
+      const ScanUploadException(
+        stage: 'physique_question',
+        path: '/api/v1/saas/physiques/next-question',
+        message: 'Not Found',
+        statusCode: 404,
+      ),
+    ]);
+
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (_) async {},
+    );
+    await tester.pumpAndSettle();
+
+    expect(remoteSource.requests, hasLength(1));
+    expect(find.byKey(const ValueKey('scan_question_error')), findsOneWidget);
+    expect(find.textContaining('Not Found'), findsOneWidget);
+  });
+
+  testWidgets('bootstrap request uses miniapp payload shape', (tester) async {
+    final scanSession = _buildScanSession();
+    final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+      <PhysiqueQuestionEnvelope>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'question': <String, dynamic>{
+              'id': 11,
+              'title': 'How have you been sleeping?',
+              'options': <Map<String, String>>[
+                <String, String>{'optionValue': 'good', 'optionName': 'Good'},
+              ],
+            },
+          },
+        ),
+      ],
+    );
+
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (_) async {},
+    );
+    await tester.pumpAndSettle();
+
+    expect(remoteSource.requests, hasLength(1));
+    expect(remoteSource.requests.single.toJson(), <String, dynamic>{
+      'gender': 'F',
+      'phyCategory': 'tzpd',
+      'answers': <Map<String, dynamic>>[],
+      'age': 29,
+      'clinicId': 200,
+      'medicalCaseId': 456,
+      'name': 'Test User',
+      'phone': '13800000000',
+      'storeId': 200,
+      'tenantId': 100,
+      'tongueReportId': 789,
+      'topOrgId': 100,
+    });
+  });
+
+  testWidgets('bootstrap renders question response with backend alias fields', (
+    tester,
+  ) async {
+    final scanSession = _buildScanSession();
+    final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+      <PhysiqueQuestionEnvelope>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'payload': <String, dynamic>{
+              'nextQuestion': <String, dynamic>{
+                'question_id': '21',
+                'questionName': 'How is your appetite?',
+                'answerList': <Map<String, String>>[
+                  <String, String>{'answerValue': '2', 'answerText': 'Good'},
+                  <String, String>{'answerValue': '0', 'answerText': 'Poor'},
+                ],
+                'questionIndex': '1',
+                'total': '3',
+              },
+            },
+          },
+        ),
+      ],
+    );
+
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (_) async {},
+    );
+    await tester.pumpAndSettle();
+
+    expect(remoteSource.requests, hasLength(1));
+    expect(find.text('How is your appetite?'), findsOneWidget);
+    expect(find.text('Good'), findsOneWidget);
+    expect(find.text('Poor'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('scan_question_option_2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scan_question_option_0')),
+      findsOneWidget,
     );
   });
 
+  testWidgets('skip without reportId shows error instead of navigating', (
+    tester,
+  ) async {
+    final scanSession = _buildScanSessionWithoutReportId();
+    final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+      <PhysiqueQuestionEnvelope>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'question': <String, dynamic>{
+              'id': 11,
+              'title': 'How have you been sleeping?',
+              'options': <Map<String, String>>[
+                <String, String>{'optionValue': 'good', 'optionName': 'Good'},
+              ],
+            },
+          },
+        ),
+      ],
+    );
+
+    var didNavigate = false;
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (_) async => didNavigate = true,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('scan_question_skip_button')));
+    await tester.pumpAndSettle();
+
+    expect(didNavigate, isFalse);
+    expect(find.byKey(const ValueKey('scan_question_error')), findsOneWidget);
+  });
+
   testWidgets(
-    'answer submission sends accumulated answers and navigates with final report id',
+    'single-choice option tap sends accumulated answers and navigates',
     (tester) async {
       final scanSession = _buildScanSession();
       final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
@@ -214,10 +476,10 @@ void main() {
             data: <String, dynamic>{
               'next': <String, dynamic>{
                 'id': 11,
-                'question': '最近睡眠怎么样？',
+                'question': 'How have you been sleeping?',
                 'options': <Map<String, String>>[
-                  <String, String>{'value': 'good', 'text': '挺好'},
-                  <String, String>{'value': 'normal', 'text': '一般'},
+                  <String, String>{'value': 'good', 'text': 'Good'},
+                  <String, String>{'value': 'normal', 'text': 'Normal'},
                 ],
                 'currentIndex': 1,
                 'totalCount': 1,
@@ -241,51 +503,305 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('scan_question_title')), findsOneWidget);
-      expect(find.text('最近睡眠怎么样？'), findsOneWidget);
-      expect(find.text('挺好'), findsOneWidget);
-      expect(find.text('一般'), findsOneWidget);
-      expect(remoteSource.requests, hasLength(1));
-      expect(remoteSource.requests.first.toJson(), <String, dynamic>{
-        'gender': 'F',
-        'phyCategory': 'PHY-TEST',
-        'age': 29,
-        'clinicId': 200,
-        'medicalCaseId': 456,
-        'name': '测试用户',
-        'phone': '13800000000',
-        'storeId': 200,
-        'tenantId': 100,
-        'tongueReportId': 789,
-        'topOrgId': 100,
-      });
+      expect(find.text('How have you been sleeping?'), findsOneWidget);
+      expect(find.text('Good'), findsOneWidget);
+      expect(find.text('Normal'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('scan_question_submit_button')),
+        findsNothing,
+      );
 
       await tester.tap(
         find.byKey(const ValueKey('scan_question_option_normal')),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const ValueKey('scan_question_submit_button')),
       );
       await tester.pumpAndSettle();
 
       expect(remoteSource.requests, hasLength(2));
       expect(remoteSource.requests.last.toJson(), <String, dynamic>{
         'gender': 'F',
-        'phyCategory': 'PHY-TEST',
+        'phyCategory': 'tzpd',
+        'answers': <Map<String, dynamic>>[
+          <String, dynamic>{'id': 11, 'optionValue': 'normal'},
+        ],
         'age': 29,
         'clinicId': 200,
         'medicalCaseId': 456,
-        'name': '测试用户',
+        'name': 'Test User',
         'phone': '13800000000',
         'storeId': 200,
         'tenantId': 100,
         'tongueReportId': 789,
         'topOrgId': 100,
-        'answers': <Map<String, dynamic>>[
-          <String, dynamic>{'id': 11, 'optionValue': 'normal'},
-        ],
       });
-      expect(navigatedReportId, 'report-final');
+      expect(navigatedReportId, 'report-123');
+      expect(scanSession.questionCompletionResult, <String, dynamic>{
+        'reportId': 'report-final',
+      });
     },
   );
+
+  testWidgets(
+    'completed result keeps original report id and stores questionnaire result',
+    (tester) async {
+      final scanSession = _buildScanSession();
+      final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+        <PhysiqueQuestionEnvelope>[
+          const PhysiqueQuestionEnvelope(
+            code: 0,
+            data: <String, dynamic>{
+              'next': <String, dynamic>{
+                'id': 11,
+                'question': 'How have you been sleeping?',
+                'options': <Map<String, String>>[
+                  <String, String>{'value': 'good', 'text': 'Good'},
+                ],
+              },
+            },
+          ),
+          const PhysiqueQuestionEnvelope(
+            code: 0,
+            data: <String, dynamic>{
+              'result': <String, dynamic>{
+                'reportId': 'question-result-report',
+                'phyType': 'Qi deficiency',
+                'physiqueResults': <Map<String, Object>>[
+                  <String, Object>{
+                    'id': '2',
+                    'name': 'Qi deficiency',
+                    'score': 82,
+                  },
+                ],
+              },
+            },
+          ),
+        ],
+      );
+
+      String? navigatedReportId;
+      await _pumpQuestionPage(
+        tester,
+        scanSession: scanSession,
+        remoteSource: remoteSource,
+        onNavigate: (reportId) async => navigatedReportId = reportId,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('scan_question_option_good')));
+      await tester.pumpAndSettle();
+
+      expect(navigatedReportId, 'report-123');
+      expect(
+        scanSession.questionCompletionResult?['reportId'],
+        'question-result-report',
+      );
+      expect(
+        scanSession.questionCompletionResult?['physiqueResults'],
+        isNotEmpty,
+      );
+    },
+  );
+
+  testWidgets(
+    'answer submission retries transient not-ready failure before advancing',
+    (tester) async {
+      final scanSession = _buildScanSession();
+      final remoteSource = _QueuePhysiqueQuestionRemoteSource(<Object>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 11,
+              'question': 'How have you been sleeping?',
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'good', 'text': 'Good'},
+              ],
+              'currentIndex': 1,
+              'totalCount': 2,
+            },
+          },
+        ),
+        const ScanUploadException(
+          stage: 'physique_question',
+          path: '/api/v1/saas/physiques/next-question',
+          message: 'Report is generating',
+          statusCode: 404,
+          messageKey: 'physique.report_generating',
+        ),
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 12,
+              'question': 'How is your appetite?',
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'normal', 'text': 'Normal'},
+              ],
+              'currentIndex': 2,
+              'totalCount': 2,
+            },
+          },
+        ),
+      ]);
+
+      await _pumpQuestionPage(
+        tester,
+        scanSession: scanSession,
+        remoteSource: remoteSource,
+        onNavigate: (_) async {},
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('scan_question_option_good')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('scan_question_submit_progress')),
+        findsOneWidget,
+      );
+
+      await tester.pump(const Duration(milliseconds: 301));
+      await tester.pumpAndSettle();
+
+      expect(remoteSource.requests, hasLength(3));
+      expect(remoteSource.requests.last.toJson()['answers'], <Object>[
+        <String, dynamic>{'id': 11, 'optionValue': 'good'},
+      ]);
+      expect(find.text('How is your appetite?'), findsOneWidget);
+      expect(find.text('How have you been sleeping?'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'answer submission retries transient param-invalid failure before advancing',
+    (tester) async {
+      final scanSession = _buildScanSession();
+      final remoteSource = _QueuePhysiqueQuestionRemoteSource(<Object>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 11,
+              'question': 'How have you been sleeping?',
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'good', 'text': 'Good'},
+              ],
+              'currentIndex': 1,
+              'totalCount': 2,
+            },
+          },
+        ),
+        const ScanUploadException(
+          stage: 'physique_question',
+          path: '/api/v1/saas/physiques/next-question',
+          message: '请求参数不合法[1]',
+          statusCode: 400,
+          businessCode: 24043,
+          messageKey: 'physique.param_invalid',
+        ),
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 12,
+              'question': 'How is your appetite?',
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'normal', 'text': 'Normal'},
+              ],
+              'currentIndex': 2,
+              'totalCount': 2,
+            },
+          },
+        ),
+      ]);
+
+      await _pumpQuestionPage(
+        tester,
+        scanSession: scanSession,
+        remoteSource: remoteSource,
+        onNavigate: (_) async {},
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('scan_question_option_good')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('scan_question_submit_progress')),
+        findsOneWidget,
+      );
+
+      await tester.pump(const Duration(milliseconds: 301));
+      await tester.pumpAndSettle();
+
+      expect(remoteSource.requests, hasLength(3));
+      expect(find.text('How is your appetite?'), findsOneWidget);
+      expect(find.text('请求参数不合法[1]'), findsNothing);
+    },
+  );
+
+  testWidgets('submitting the same question replaces the previous answer', (
+    tester,
+  ) async {
+    final scanSession = _buildScanSession();
+    scanSession.saveQuestionFlowSnapshot(
+      const PhysiqueQuestionFlowSnapshot(
+        requestContext: PhysiqueQuestionRequestContext(
+          gender: 'F',
+          phyCategory: 'tzpd',
+          age: 29,
+          tenantId: 100,
+          storeId: 200,
+          tongueReportId: 789,
+        ),
+        answers: <PhysiqueQuestionRequestAnswer>[
+          PhysiqueQuestionRequestAnswer(id: 11, optionValue: 'old'),
+        ],
+        amenorrhea: null,
+        question: PhysiqueQuestionPayload(
+          raw: <String, dynamic>{},
+          id: 11,
+          title: 'How have you been sleeping?',
+          options: <PhysiqueQuestionOption>[
+            PhysiqueQuestionOption(value: 'good', label: 'Good'),
+            PhysiqueQuestionOption(value: 'normal', label: 'Normal'),
+          ],
+          currentIndex: 1,
+          totalCount: 2,
+        ),
+      ),
+    );
+    final remoteSource = _RecordingPhysiqueQuestionRemoteSource(
+      <PhysiqueQuestionEnvelope>[
+        const PhysiqueQuestionEnvelope(
+          code: 0,
+          data: <String, dynamic>{
+            'next': <String, dynamic>{
+              'id': 12,
+              'question': 'How is your appetite?',
+              'options': <Map<String, String>>[
+                <String, String>{'value': 'normal', 'text': 'Normal'},
+              ],
+            },
+          },
+        ),
+      ],
+    );
+
+    await _pumpQuestionPage(
+      tester,
+      scanSession: scanSession,
+      remoteSource: remoteSource,
+      onNavigate: (_) async {},
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('scan_question_option_normal')));
+    await tester.pumpAndSettle();
+
+    expect(remoteSource.requests, hasLength(1));
+    expect(remoteSource.requests.single.toJson()['answers'], <Object>[
+      <String, dynamic>{'id': 11, 'optionValue': 'normal'},
+    ]);
+    expect(find.text('How is your appetite?'), findsOneWidget);
+  });
 }

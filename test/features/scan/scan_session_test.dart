@@ -59,17 +59,96 @@ void main() {
     expect(upload.reportId, isEmpty);
     expect(upload.tongueReportId, 789);
     expect(session.reportId, isNull);
+    expect(session.tongueReportId, isNull);
   });
 
-  test('tongue upload parses nested report ids for report persistence', () {
+  test('tongue upload does not fallback to unrelated ids for report id', () {
     const upload = ScanTongueUploadResult(<String, dynamic>{
+      'imageId': 'image-123',
+      'id': 'data-id',
       'report': <String, dynamic>{'id': 456},
-      'tongueReport': <String, dynamic>{'id': 789},
+      'analysisResult': <String, dynamic>{'tongueReportId': 'analysis-id'},
+      'tongueReport': <String, dynamic>{'id': 789, 'success': true},
+      'medicalCase': <String, dynamic>{'id': 999},
+    });
+    final session = ScanSession()..saveTongueUpload(upload);
+
+    expect(upload.reportId, isEmpty);
+    expect(upload.tongueReportId, 789);
+    expect(session.reportId, isNull);
+    expect(session.tongueReportId, isNull);
+  });
+
+  test('tongueReport.reportId is used for question and report continuity', () {
+    const upload = ScanTongueUploadResult(<String, dynamic>{
+      'analysisResult': <String, dynamic>{'success': true, 'hasTongue': true},
+      'tongueReport': <String, dynamic>{
+        'id': 789,
+        'success': true,
+        'reportId': 456,
+      },
     });
     final session = ScanSession()..saveTongueUpload(upload);
 
     expect(upload.reportId, '456');
     expect(upload.tongueReportId, 789);
     expect(session.reportId, '456');
+    expect(session.tongueReportId, 789);
+  });
+
+  test('tongue upload separates tongue detection from report generation', () {
+    const pendingReport = ScanTongueUploadResult(<String, dynamic>{
+      'imageId': 'image-123',
+      'analysisResult': <String, dynamic>{'success': true, 'hasTongue': true},
+      'tongueReport': <String, dynamic>{'success': false, 'reportId': null},
+    });
+    const readyReport = ScanTongueUploadResult(<String, dynamic>{
+      'analysisResult': <String, dynamic>{'success': true, 'hasTongue': true},
+      'tongueReport': <String, dynamic>{
+        'success': true,
+        'reportId': 'report-123',
+      },
+    });
+
+    expect(pendingReport.analysisSucceeded, isTrue);
+    expect(pendingReport.hasDetectedTongue, isTrue);
+    expect(pendingReport.tongueReportSucceeded, isFalse);
+    expect(pendingReport.reportGenerationFailed, isTrue);
+    expect(pendingReport.hasGeneratedReport, isFalse);
+    expect(pendingReport.reportId, isEmpty);
+    expect(pendingReport.imageId, 'image-123');
+    expect(readyReport.hasGeneratedReport, isTrue);
+    expect(readyReport.reportId, 'report-123');
+  });
+
+  test(
+    'session does not persist report id until tongue report is generated',
+    () {
+      const upload = ScanTongueUploadResult(<String, dynamic>{
+        'analysisResult': <String, dynamic>{'success': true, 'hasTongue': true},
+        'tongueReport': <String, dynamic>{
+          'success': false,
+          'reportId': 'report-pending',
+        },
+      });
+
+      final session = ScanSession()..saveTongueUpload(upload);
+
+      expect(upload.reportGenerationFailed, isTrue);
+      expect(session.reportId, isNull);
+      expect(session.tongueReportId, isNull);
+    },
+  );
+
+  test('saveReportId overrides the report id returned by tongue upload', () {
+    const upload = ScanTongueUploadResult(<String, dynamic>{
+      'analysisResult': <String, dynamic>{'success': true, 'hasTongue': true},
+      'tongueReport': <String, dynamic>{'success': true, 'reportId': '456'},
+    });
+    final session = ScanSession()..saveTongueUpload(upload);
+
+    session.saveReportId('report-final');
+
+    expect(session.reportId, 'report-final');
   });
 }

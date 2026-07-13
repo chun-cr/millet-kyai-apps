@@ -1408,7 +1408,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportConstitutionSpecial => '特禀质';
 
   @override
-  String get reportCausalAnalysisTitle => '分析成因';
+  String get reportCausalAnalysisTitle => '体质分析';
+
+  @override
+  String get reportPhysiqueAnalysisLoading => '正在读取体质分析内容...';
+
+  @override
+  String get reportPhysiqueAnalysisFailed => '体质分析内容暂未加载成功，请稍后重试。';
+
+  @override
+  String get reportPhysiqueAnalysisEmpty => '暂无体质分析内容。';
+
+  @override
+  String get reportPhysiqueAnalysisMainFeatureLabel => '主要特征';
+
+  @override
+  String get reportPhysiqueAnalysisBodyFeatureLabel => '形体特征';
+
+  @override
+  String get reportPhysiqueAnalysisManifestationsLabel => '常见表现';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendenciesLabel => '发病倾向';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendencyNoteLabel => '发病倾向说明';
+
+  @override
+  String get reportPhysiqueAnalysisPsychologicalFeatureLabel => '心理特征';
+
+  @override
+  String get reportPhysiqueAnalysisEnvironmentAdaptabilityLabel => '对外界适应能力';
 
   @override
   String get reportCauseRoutine => '作息';
@@ -1462,7 +1492,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportDiseaseEmotionalBody => '焦虑、失眠、抑郁倾向';
 
   @override
-  String get reportBadHabitsTitle => '不当的举动';
+  String get reportBadHabitsTitle => '体质解读';
 
   @override
   String get reportBadHabitOverwork => '过度劳累';
@@ -1554,7 +1584,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '孕妇、皮肤破损处及月经期间请避免艾灸。操作时注意火候，防止烫伤。';
 
   @override
-  String get reportMentalWellnessTitle => '精神养生';
+  String get reportMentalWellnessTitle => '调养参考';
 
   @override
   String get reportMentalTipCalm => '恬淡虚无';
@@ -1985,7 +2015,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportUnlockBenefitConstitution => '完整查看体质成因、风险倾向与深度解读';
 
   @override
-  String get reportUnlockBenefitTherapy => '获得专属穴位方案、精神养生与四季调理建议';
+  String get reportUnlockBenefitTherapy => '获得专属穴位方案、调养参考与四季调理建议';
 
   @override
   String get reportUnlockBenefitAdvice => '解锁舌象详解、饮食方向与相关产品推荐';
@@ -2038,10 +2068,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportUnlockSheetMockHint => '当前为本地模拟购买流程，后续可替换为 Apple IAP。';
 
   @override
-  String get reportUnlockCausalAnalysisTitle => '解锁成因深度分析';
+  String get reportUnlockCausalAnalysisTitle => '解锁体质分析';
 
   @override
-  String get reportUnlockCausalAnalysisSubtitle => '查看体质成因与关键诱因。';
+  String get reportUnlockCausalAnalysisSubtitle => '查看主导体质特征与表现。';
 
   @override
   String get reportUnlockDiseaseTendencyTitle => '解锁疾病倾向预警';
@@ -2050,10 +2080,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportUnlockDiseaseTendencySubtitle => '查看易发问题与预警重点。';
 
   @override
-  String get reportUnlockBadHabitsTitle => '解锁不当行为提示';
+  String get reportUnlockBadHabitsTitle => '解锁体质解读';
 
   @override
-  String get reportUnlockBadHabitsSubtitle => '查看需要调整的日常习惯。';
+  String get reportUnlockBadHabitsSubtitle => '查看体质解读内容。';
 
   @override
   String get reportUnlockAcupuncturePointsTitle => '解锁专属穴位方案';
@@ -2062,10 +2092,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportUnlockAcupuncturePointsSubtitle => '查看专属穴位与调理重点。';
 
   @override
-  String get reportUnlockMentalWellnessTitle => '解锁精神养生建议';
+  String get reportUnlockMentalWellnessTitle => '解锁调养参考';
 
   @override
-  String get reportUnlockMentalWellnessSubtitle => '查看情绪调养与舒缓建议。';
+  String get reportUnlockMentalWellnessSubtitle => '查看调养参考内容。';
 
   @override
   String get reportUnlockSeasonalCareTitle => '解锁四季养生方案';
@@ -2103,7 +2133,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportPremiumConstitutionPreview2 => '可解锁完整体质与风险趋势解读';
 
   @override
-  String get reportPremiumTherapySubtitle => '查看专属穴位、精神养生与四季调理建议。';
+  String get reportPremiumTherapySubtitle => '查看专属穴位、调养参考与四季调理建议。';
 
   @override
   String get reportPremiumTherapyPreview1 => '推荐重点：足三里 · 气海';
@@ -2238,7 +2268,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportConstitutionInheritedSpecial => '特禀质';
 
   @override
-  String get reportConstitutionCausalTitle => '分析成因';
+  String get reportConstitutionCausalTitle => '体质分析';
 
   @override
   String get reportConstitutionCauseRoutineTitle => '作息';
@@ -2292,7 +2322,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportConstitutionDiseaseEmotionDesc => '焦虑、失眠、抑郁倾向';
 
   @override
-  String get reportConstitutionBadHabitsTitle => '不当的举动';
+  String get reportConstitutionBadHabitsTitle => '体质解读';
 
   @override
   String get reportConstitutionHabitOverworkTitle => '过度劳累';
@@ -2383,7 +2413,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportTherapyAcupointWarning => '孕妇、皮肤破损处及月经期间请避免艾灸。操作时注意火候，防止烫伤。';
 
   @override
-  String get reportTherapyMentalTitle => '精神养生';
+  String get reportTherapyMentalTitle => '调养参考';
 
   @override
   String get reportTherapyMentalCalmTitle => '恬淡虚无';

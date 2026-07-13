@@ -14,6 +14,27 @@ class PhysiqueQuestionRequestAnswer {
   }
 }
 
+class PhysiqueQuestionFlowSnapshot {
+  const PhysiqueQuestionFlowSnapshot({
+    required this.requestContext,
+    required this.answers,
+    required this.amenorrhea,
+    this.question,
+    this.completedResult,
+    this.completionReportId,
+  });
+
+  final PhysiqueQuestionRequestContext requestContext;
+  final List<PhysiqueQuestionRequestAnswer> answers;
+  final String? amenorrhea;
+  final PhysiqueQuestionPayload? question;
+  final Map<String, dynamic>? completedResult;
+  final String? completionReportId;
+
+  bool get hasQuestion => question != null;
+  bool get hasCompletedResult => completedResult?.isNotEmpty == true;
+}
+
 class PhysiqueQuestionRequestContext {
   const PhysiqueQuestionRequestContext({
     required this.gender,
@@ -29,6 +50,7 @@ class PhysiqueQuestionRequestContext {
     this.t,
     this.tenantId,
     this.key,
+    this.reportId,
     this.tongueReportId,
     this.topOrgId,
   });
@@ -46,6 +68,7 @@ class PhysiqueQuestionRequestContext {
   final int? t;
   final int? tenantId;
   final String? key;
+  final String? reportId;
   final int? tongueReportId;
   final int? topOrgId;
 
@@ -118,10 +141,9 @@ class PhysiqueQuestionRequest {
     final data = <String, dynamic>{
       'gender': gender,
       'phyCategory': phyCategory,
+      'answers': answers.map((item) => item.toJson()).toList(growable: false),
       if (age != null) 'age': age,
       if (_isPresent(amenorrhea)) 'amenorrhea': amenorrhea,
-      if (answers.isNotEmpty)
-        'answers': answers.map((item) => item.toJson()).toList(growable: false),
       if (_isPresent(birthyear)) 'birthyear': birthyear,
       if (clinicId != null) 'clinicId': clinicId,
       if (_isPresent(exact)) 'exact': exact,
@@ -170,28 +192,34 @@ class PhysiqueQuestionFlowResult {
     required this.rawData,
     this.question,
     this.reportId,
+    this.completedResult,
   });
 
   factory PhysiqueQuestionFlowResult.fromData(Map<String, dynamic> data) {
     final question = PhysiqueQuestionPayload.fromData(data);
+    final hasQuestion = question.hasRenderableQuestion;
     return PhysiqueQuestionFlowResult(
       rawData: data,
-      question: question.hasRenderableQuestion ? question : null,
+      question: hasQuestion ? question : null,
       reportId: _firstNonEmptyString(<Object?>[
         data['reportId'],
+        data['id'],
         _readPath(data, 'report.reportId'),
         _readPath(data, 'report.id'),
         _readPath(data, 'tongueReport.reportId'),
         _readPath(data, 'result.reportId'),
+        _readPath(data, 'result.id'),
         _readPath(data, 'diagnosisReport.reportId'),
         _readPath(data, 'diagnosisReport.id'),
         _readPath(data, 'medicalCase.reportId'),
       ]),
+      completedResult: hasQuestion ? null : _resolveCompletedResult(data),
     );
   }
 
   final PhysiqueQuestionPayload? question;
   final String? reportId;
+  final Map<String, dynamic>? completedResult;
   final Map<String, dynamic> rawData;
 
   bool get isCompleted => question == null;
@@ -217,15 +245,30 @@ class PhysiqueQuestionPayload {
       id: _firstInt(<Object?>[
         questionMap['id'],
         questionMap['questionId'],
+        questionMap['question_id'],
+        questionMap['qId'],
         questionMap['subjectId'],
+        questionMap['subject_id'],
+        questionMap['questionNo'],
+        questionMap['questionNumber'],
+        questionMap['sort'],
+        questionMap['sortNo'],
       ]),
       title: _firstNonEmptyString(<Object?>[
         questionMap['question'],
         questionMap['title'],
         questionMap['questionTitle'],
         questionMap['questionText'],
+        questionMap['questionName'],
+        questionMap['questionContent'],
         questionMap['content'],
+        questionMap['text'],
         questionMap['name'],
+        questionMap['subject'],
+        questionMap['stem'],
+        questionMap['topic'],
+        questionMap['displayName'],
+        questionMap['labelText'],
       ]),
       description: _firstNonEmptyString(<Object?>[
         questionMap['description'],
@@ -237,6 +280,7 @@ class PhysiqueQuestionPayload {
       fieldCode: _firstNonEmptyString(<Object?>[
         questionMap['fieldCode'],
         questionMap['questionCode'],
+        questionMap['question_code'],
         questionMap['code'],
         questionMap['key'],
         questionMap['slug'],
@@ -244,6 +288,9 @@ class PhysiqueQuestionPayload {
       currentIndex: _firstInt(<Object?>[
         questionMap['currentIndex'],
         questionMap['questionIndex'],
+        questionMap['index'],
+        questionMap['sort'],
+        questionMap['sortNo'],
         data['currentIndex'],
         data['questionTotal'],
         data['index'],
@@ -251,8 +298,11 @@ class PhysiqueQuestionPayload {
       totalCount: _firstInt(<Object?>[
         questionMap['totalCount'],
         questionMap['questionTotal'],
+        questionMap['total'],
+        questionMap['count'],
         data['totalCount'],
         data['total'],
+        data['count'],
       ]),
       options: optionMaps
           .map(PhysiqueQuestionOption.fromJson)
@@ -272,6 +322,32 @@ class PhysiqueQuestionPayload {
 
   bool get hasRenderableQuestion =>
       id != null && title.trim().isNotEmpty && options.isNotEmpty;
+
+  bool get isSingleChoice => !allowsMultipleSelection;
+
+  bool get allowsMultipleSelection {
+    for (final value in <Object?>[
+      raw['multiple'],
+      raw['multiSelect'],
+      raw['isMultiple'],
+      raw['multipleChoice'],
+    ]) {
+      if (value is bool && value) {
+        return true;
+      }
+    }
+
+    final normalizedType = _firstNonEmptyString(<Object?>[
+      raw['selectionType'],
+      raw['selectType'],
+      raw['type'],
+      raw['questionType'],
+      raw['inputType'],
+    ]).toLowerCase();
+    return normalizedType.contains('multi') ||
+        normalizedType.contains('multiple') ||
+        normalizedType.contains('checkbox');
+  }
 
   bool get isAmenorrheaQuestion {
     final normalizedFieldCode = fieldCode.toLowerCase();
@@ -294,12 +370,23 @@ class PhysiqueQuestionOption {
     return PhysiqueQuestionOption(
       value: _firstNonEmptyString(<Object?>[
         json['optionValue'],
+        json['answerValue'],
+        json['optionCode'],
+        json['answerCode'],
         json['value'],
         json['code'],
         json['id'],
+        json['score'],
+        json['sort'],
+        json['sortNo'],
       ]),
       label: _firstNonEmptyString(<Object?>[
         json['optionName'],
+        json['optionText'],
+        json['optionLabel'],
+        json['answerName'],
+        json['answerText'],
+        json['answer'],
         json['text'],
         json['label'],
         json['name'],
@@ -325,40 +412,59 @@ class PhysiqueQuestionOption {
 bool _isPresent(String? value) => value != null && value.trim().isNotEmpty;
 
 Map<String, dynamic> _resolveQuestionMap(Map<String, dynamic> data) {
-  final nested = <Object?>[
-    data['question'],
-    data['next'],
-    data['currentQuestion'],
-    data['nextQuestion'],
-    data['item'],
-  ];
-  for (final value in nested) {
+  for (final source in _resolveResponseRoots(data)) {
+    for (final key in _questionObjectKeys) {
+      final map = _asMap(source[key]);
+      if (map.isNotEmpty) {
+        return map;
+      }
+    }
+
+    if (_looksLikeQuestionMap(source)) {
+      return source;
+    }
+
+    for (final key in _questionListKeys) {
+      final list = _asListOfMaps(source[key]);
+      for (final item in list) {
+        if (_looksLikeQuestionMap(item)) {
+          return item;
+        }
+      }
+    }
+  }
+  return data;
+}
+
+Map<String, dynamic>? _resolveCompletedResult(Map<String, dynamic> data) {
+  for (final value in <Object?>[
+    data['result'],
+    data['report'],
+    data['diagnosisReport'],
+    data['tongueReport'],
+  ]) {
     final map = _asMap(value);
     if (map.isNotEmpty) {
       return map;
     }
   }
-  return data;
+  return data.isEmpty ? null : Map<String, dynamic>.from(data);
 }
 
 List<Map<String, dynamic>> _resolveOptionMaps(
   Map<String, dynamic> questionMap,
   Map<String, dynamic> data,
 ) {
-  final values = <Object?>[
-    questionMap['options'],
-    questionMap['optionList'],
-    questionMap['questionOptions'],
-    questionMap['items'],
-    data['options'],
-    data['optionList'],
-    data['questionOptions'],
-    data['items'],
+  final sources = <Map<String, dynamic>>[
+    questionMap,
+    ..._resolveResponseRoots(data),
   ];
-  for (final value in values) {
-    final list = _asListOfMaps(value);
-    if (list.isNotEmpty) {
-      return list;
+  for (final source in sources) {
+    for (final key in _optionListKeys) {
+      final list = _asOptionList(source[key]);
+      if (list.isNotEmpty) {
+        return list;
+      }
     }
   }
   return const <Map<String, dynamic>>[];
@@ -373,6 +479,142 @@ List<Map<String, dynamic>> _asListOfMaps(Object? value) {
       .map((item) => Map<String, dynamic>.from(item))
       .toList(growable: false);
 }
+
+List<Map<String, dynamic>> _asOptionList(Object? value) {
+  if (value is List) {
+    return value
+        .map(_normalizeOptionItem)
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+  final map = _asMap(value);
+  if (map.isEmpty) {
+    return const <Map<String, dynamic>>[];
+  }
+  return map.entries
+      .map((entry) {
+        final option = _asMap(entry.value);
+        if (option.isNotEmpty) {
+          return <String, dynamic>{'value': entry.key, ...option};
+        }
+        final label = _asNullableString(entry.value);
+        if (label == null) {
+          return const <String, dynamic>{};
+        }
+        return <String, dynamic>{'value': entry.key, 'text': label};
+      })
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
+}
+
+Map<String, dynamic> _normalizeOptionItem(Object? value) {
+  final map = _asMap(value);
+  if (map.isNotEmpty) {
+    return map;
+  }
+  final label = _asNullableString(value);
+  if (label == null) {
+    return const <String, dynamic>{};
+  }
+  return <String, dynamic>{'value': label, 'text': label};
+}
+
+List<Map<String, dynamic>> _resolveResponseRoots(Map<String, dynamic> data) {
+  final roots = <Map<String, dynamic>>[];
+  final visited = <Map<String, dynamic>>{};
+
+  void addRoot(Map<String, dynamic> root) {
+    if (root.isEmpty || visited.contains(root)) {
+      return;
+    }
+    visited.add(root);
+    roots.add(root);
+    for (final key in _responseContainerKeys) {
+      final nested = _asMap(root[key]);
+      if (nested.isNotEmpty) {
+        addRoot(nested);
+      }
+    }
+  }
+
+  addRoot(data);
+  return roots;
+}
+
+bool _looksLikeQuestionMap(Map<String, dynamic> data) {
+  final hasId =
+      _firstInt(<Object?>[
+        data['id'],
+        data['questionId'],
+        data['question_id'],
+        data['qId'],
+        data['subjectId'],
+        data['subject_id'],
+      ]) !=
+      null;
+  final hasTitle = _firstNonEmptyString(<Object?>[
+    data['question'],
+    data['title'],
+    data['questionTitle'],
+    data['questionText'],
+    data['questionName'],
+    data['questionContent'],
+    data['content'],
+    data['text'],
+    data['name'],
+    data['subject'],
+    data['stem'],
+    data['topic'],
+    data['displayName'],
+    data['labelText'],
+  ]).isNotEmpty;
+  final hasOptions = _optionListKeys.any(
+    (key) => _asOptionList(data[key]).isNotEmpty,
+  );
+  return (hasTitle && (hasId || hasOptions)) || (hasId && hasOptions);
+}
+
+const _responseContainerKeys = <String>[
+  'data',
+  'payload',
+  'body',
+  'resultData',
+  'response',
+];
+
+const _questionObjectKeys = <String>[
+  'question',
+  'next',
+  'currentQuestion',
+  'nextQuestion',
+  'item',
+  'subject',
+  'questionInfo',
+  'questionItem',
+  'current',
+];
+
+const _questionListKeys = <String>[
+  'questions',
+  'questionList',
+  'questionItems',
+  'records',
+  'list',
+];
+
+const _optionListKeys = <String>[
+  'options',
+  'optionList',
+  'questionOptions',
+  'items',
+  'answers',
+  'answerList',
+  'answerOptions',
+  'choices',
+  'choiceList',
+  'optionItems',
+  'optionDTOList',
+];
 
 Map<String, dynamic> _asMap(Object? value) {
   if (value is Map<String, dynamic>) {

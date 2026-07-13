@@ -1423,7 +1423,38 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportConstitutionSpecial => '特稟質';
 
   @override
-  String get reportCausalAnalysisTitle => '要因分析';
+  String get reportCausalAnalysisTitle => '体質分析';
+
+  @override
+  String get reportPhysiqueAnalysisLoading => '体質分析の内容を読み込んでいます...';
+
+  @override
+  String get reportPhysiqueAnalysisFailed =>
+      '体質分析の内容を読み込めませんでした。しばらくしてからもう一度お試しください。';
+
+  @override
+  String get reportPhysiqueAnalysisEmpty => '体質分析の内容はまだありません。';
+
+  @override
+  String get reportPhysiqueAnalysisMainFeatureLabel => '主な特徴';
+
+  @override
+  String get reportPhysiqueAnalysisBodyFeatureLabel => '身体的特徴';
+
+  @override
+  String get reportPhysiqueAnalysisManifestationsLabel => 'よく見られる症状';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendenciesLabel => '発症傾向';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendencyNoteLabel => '発症傾向の説明';
+
+  @override
+  String get reportPhysiqueAnalysisPsychologicalFeatureLabel => '心理的特徴';
+
+  @override
+  String get reportPhysiqueAnalysisEnvironmentAdaptabilityLabel => '外部環境への適応力';
 
   @override
   String get reportCauseRoutine => '生活リズム';
@@ -1478,7 +1509,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportDiseaseEmotionalBody => '不安、不眠、気分の落ち込み傾向';
 
   @override
-  String get reportBadHabitsTitle => '避けたい習慣';
+  String get reportBadHabitsTitle => '体質解説';
 
   @override
   String get reportBadHabitOverwork => '過労';
@@ -1570,7 +1601,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '妊娠中、皮膚損傷部位、生理期間中はお灸を避けてください。やけど防止のため温度管理にご注意ください。';
 
   @override
-  String get reportMentalWellnessTitle => '精神養生';
+  String get reportMentalWellnessTitle => '調養参考';
 
   @override
   String get reportMentalTipCalm => '心を穏やかに保つ';
@@ -2016,7 +2047,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportUnlockBenefitConstitution => '体質の原因、リスク傾向、詳しい解釈をまとめて確認できます';
 
   @override
-  String get reportUnlockBenefitTherapy => '専用の経穴提案、精神養生、四季のケア提案を受け取れます';
+  String get reportUnlockBenefitTherapy => '専用の経穴提案、調養参考、四季のケア提案を受け取れます';
 
   @override
   String get reportUnlockBenefitAdvice => '舌象の詳細解説、食養生の方向性、関連商品の提案を解放します';
@@ -2073,10 +2104,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '現在はローカルの模擬購入フローです。後で Apple IAP に置き換えできます。';
 
   @override
-  String get reportUnlockCausalAnalysisTitle => '成因の深掘り分析を解放';
+  String get reportUnlockCausalAnalysisTitle => '体質分析を解放';
 
   @override
-  String get reportUnlockCausalAnalysisSubtitle => '查看体质成因与关键诱因。';
+  String get reportUnlockCausalAnalysisSubtitle => '查看主导体质特征与表现。';
 
   @override
   String get reportUnlockDiseaseTendencyTitle => '疾患傾向アラートを解放';
@@ -2085,10 +2116,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportUnlockDiseaseTendencySubtitle => '查看易发问题与预警重点。';
 
   @override
-  String get reportUnlockBadHabitsTitle => '望ましくない行動の注意点を解放';
+  String get reportUnlockBadHabitsTitle => '体質解説を解放';
 
   @override
-  String get reportUnlockBadHabitsSubtitle => '查看需要调整的日常习惯。';
+  String get reportUnlockBadHabitsSubtitle => '查看体质解读内容。';
 
   @override
   String get reportUnlockAcupuncturePointsTitle => '専用の経穴プランを解放';
@@ -2097,10 +2128,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportUnlockAcupuncturePointsSubtitle => '查看专属穴位与调理重点。';
 
   @override
-  String get reportUnlockMentalWellnessTitle => '精神養生アドバイスを解放';
+  String get reportUnlockMentalWellnessTitle => '調養参考を解放';
 
   @override
-  String get reportUnlockMentalWellnessSubtitle => '查看情绪调养与舒缓建议。';
+  String get reportUnlockMentalWellnessSubtitle => '查看调养参考内容。';
 
   @override
   String get reportUnlockSeasonalCareTitle => '四季の養生プランを解放';
@@ -2139,7 +2170,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportPremiumConstitutionPreview2 => '体質とリスク傾向の詳しい解釈を解放';
 
   @override
-  String get reportPremiumTherapySubtitle => 'おすすめ経穴、精神養生、四季のケア提案を確認できます。';
+  String get reportPremiumTherapySubtitle => 'おすすめ経穴、調養参考、四季のケア提案を確認できます。';
 
   @override
   String get reportPremiumTherapyPreview1 => 'おすすめ重点：足三里・気海';
@@ -2277,7 +2308,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportConstitutionInheritedSpecial => '特稟質';
 
   @override
-  String get reportConstitutionCausalTitle => '要因分析';
+  String get reportConstitutionCausalTitle => '体質分析';
 
   @override
   String get reportConstitutionCauseRoutineTitle => '生活リズム';
@@ -2335,7 +2366,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportConstitutionDiseaseEmotionDesc => '不安、不眠、気分の落ち込み傾向';
 
   @override
-  String get reportConstitutionBadHabitsTitle => '避けたい習慣';
+  String get reportConstitutionBadHabitsTitle => '体質解説';
 
   @override
   String get reportConstitutionHabitOverworkTitle => '過労';
@@ -2427,7 +2458,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '妊娠中、皮膚損傷部位、生理期間中はお灸を避けてください。やけど防止のため温度管理にご注意ください。';
 
   @override
-  String get reportTherapyMentalTitle => '精神養生';
+  String get reportTherapyMentalTitle => '調養参考';
 
   @override
   String get reportTherapyMentalCalmTitle => '心を静かに保つ';

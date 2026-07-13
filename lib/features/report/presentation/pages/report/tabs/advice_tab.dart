@@ -4,12 +4,14 @@ class _Tab4Advice extends StatefulWidget {
   final bool isUnlocked;
   final Future<void> Function() onUnlock;
   final ReportViewData viewData;
+  final _ReportPhysiqueAnalysisState physiqueAnalysisState;
   final bool shouldLoadRecommendations;
 
   const _Tab4Advice({
     required this.isUnlocked,
     required this.onUnlock,
     required this.viewData,
+    required this.physiqueAnalysisState,
     required this.shouldLoadRecommendations,
   });
 
@@ -24,6 +26,8 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
   bool get _isUnlocked => widget.isUnlocked;
   Future<void> Function() get _onUnlock => widget.onUnlock;
   ReportViewData get _viewData => widget.viewData;
+  _ReportPhysiqueAnalysisState get _physiqueAnalysisState =>
+      widget.physiqueAnalysisState;
 
   @override
   void initState() {
@@ -283,6 +287,15 @@ class _Tab4AdviceState extends State<_Tab4Advice> {
 
   // ── 饮食建议 ─────────────────────────────────────────────────────
   Widget _buildDietAdviceContent(BuildContext context) {
+    if (_viewData.isLive) {
+      final section = _physiqueAnalysisState.data?.dietReference;
+      return _buildPhysiqueAnalysisSectionCard(
+        context,
+        _physiqueAnalysisState,
+        section,
+      );
+    }
+
     final l10n = context.l10n;
     final recommended = [
       (

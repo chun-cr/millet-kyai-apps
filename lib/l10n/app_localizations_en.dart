@@ -1495,7 +1495,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportConstitutionSpecial => 'Special Constitution';
 
   @override
-  String get reportCausalAnalysisTitle => 'Cause Analysis';
+  String get reportCausalAnalysisTitle => 'Constitution Analysis';
+
+  @override
+  String get reportPhysiqueAnalysisLoading =>
+      'Loading constitution analysis...';
+
+  @override
+  String get reportPhysiqueAnalysisFailed =>
+      'Constitution analysis could not be loaded. Please try again later.';
+
+  @override
+  String get reportPhysiqueAnalysisEmpty =>
+      'No constitution analysis is available.';
+
+  @override
+  String get reportPhysiqueAnalysisMainFeatureLabel => 'Main features';
+
+  @override
+  String get reportPhysiqueAnalysisBodyFeatureLabel => 'Body features';
+
+  @override
+  String get reportPhysiqueAnalysisManifestationsLabel =>
+      'Common manifestations';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendenciesLabel =>
+      'Disease tendencies';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendencyNoteLabel =>
+      'Disease tendency note';
+
+  @override
+  String get reportPhysiqueAnalysisPsychologicalFeatureLabel =>
+      'Psychological features';
+
+  @override
+  String get reportPhysiqueAnalysisEnvironmentAdaptabilityLabel =>
+      'Environmental adaptability';
 
   @override
   String get reportCauseRoutine => 'Routine';
@@ -1556,7 +1594,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Anxiety, insomnia, depressive tendency';
 
   @override
-  String get reportBadHabitsTitle => 'Harmful Habits';
+  String get reportBadHabitsTitle => 'Constitution Interpretation';
 
   @override
   String get reportBadHabitOverwork => 'Overwork';
@@ -1663,7 +1701,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Avoid moxibustion during pregnancy, menstruation, or on broken skin. Control heat carefully to prevent burns.';
 
   @override
-  String get reportMentalWellnessTitle => 'Mental Wellness';
+  String get reportMentalWellnessTitle => 'Conditioning Reference';
 
   @override
   String get reportMentalTipCalm => 'Calm Emptiness';
@@ -2136,7 +2174,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportUnlockBenefitTherapy =>
-      'Get personalized acupoint guidance, mental wellness support, and seasonal care advice';
+      'Get personalized acupoint guidance, conditioning references, and seasonal care advice';
 
   @override
   String get reportUnlockBenefitAdvice =>
@@ -2197,10 +2235,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is currently a local mock purchase flow and can be replaced with Apple IAP later.';
 
   @override
-  String get reportUnlockCausalAnalysisTitle => 'Unlock Deep Causal Analysis';
+  String get reportUnlockCausalAnalysisTitle => 'Unlock Constitution Analysis';
 
   @override
-  String get reportUnlockCausalAnalysisSubtitle => '查看体质成因与关键诱因。';
+  String get reportUnlockCausalAnalysisSubtitle => '查看主导体质特征与表现。';
 
   @override
   String get reportUnlockDiseaseTendencyTitle =>
@@ -2210,10 +2248,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportUnlockDiseaseTendencySubtitle => '查看易发问题与预警重点。';
 
   @override
-  String get reportUnlockBadHabitsTitle => 'Unlock Harmful Habit Warnings';
+  String get reportUnlockBadHabitsTitle => 'Unlock Constitution Interpretation';
 
   @override
-  String get reportUnlockBadHabitsSubtitle => '查看需要调整的日常习惯。';
+  String get reportUnlockBadHabitsSubtitle => '查看体质解读内容。';
 
   @override
   String get reportUnlockAcupuncturePointsTitle =>
@@ -2223,11 +2261,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportUnlockAcupuncturePointsSubtitle => '查看专属穴位与调理重点。';
 
   @override
-  String get reportUnlockMentalWellnessTitle =>
-      'Unlock Mental Wellness Guidance';
+  String get reportUnlockMentalWellnessTitle => 'Unlock Conditioning Reference';
 
   @override
-  String get reportUnlockMentalWellnessSubtitle => '查看情绪调养与舒缓建议。';
+  String get reportUnlockMentalWellnessSubtitle => '查看调养参考内容。';
 
   @override
   String get reportUnlockSeasonalCareTitle => 'Unlock Seasonal Wellness Plan';
@@ -2271,7 +2308,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportPremiumTherapySubtitle =>
-      'View recommended acupoints, mental wellness, and seasonal care guidance.';
+      'View recommended acupoints, conditioning references, and seasonal care guidance.';
 
   @override
   String get reportPremiumTherapyPreview1 =>
@@ -2415,7 +2452,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportConstitutionInheritedSpecial => 'Special Constitution';
 
   @override
-  String get reportConstitutionCausalTitle => 'Contributing Factors';
+  String get reportConstitutionCausalTitle => 'Constitution Analysis';
 
   @override
   String get reportConstitutionCauseRoutineTitle => 'Routine';
@@ -2478,7 +2515,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Anxiety, insomnia, depressive tendency';
 
   @override
-  String get reportConstitutionBadHabitsTitle => 'Habits to Avoid';
+  String get reportConstitutionBadHabitsTitle => 'Constitution Interpretation';
 
   @override
   String get reportConstitutionHabitOverworkTitle => 'Overwork';
@@ -2585,7 +2622,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Avoid moxibustion during pregnancy, on broken skin, and during menstruation. Watch the heat carefully to prevent burns.';
 
   @override
-  String get reportTherapyMentalTitle => 'Mental Wellness';
+  String get reportTherapyMentalTitle => 'Conditioning Reference';
 
   @override
   String get reportTherapyMentalCalmTitle => 'Stay calm and clear';

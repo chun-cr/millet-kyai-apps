@@ -8,6 +8,7 @@ import 'package:millet_kyai_apps/core/l10n/l10n.dart';
 import 'package:millet_kyai_apps/core/router/app_router.dart';
 import 'package:millet_kyai_apps/features/history/presentation/pages/history/history_record.dart';
 import 'package:millet_kyai_apps/features/history/presentation/pages/history/history_style.dart';
+import 'package:millet_kyai_apps/features/report/presentation/pages/report/report_view_data.dart';
 
 class HistorySectionTitle extends StatelessWidget {
   const HistorySectionTitle({super.key, required this.title});
@@ -78,10 +79,7 @@ class HistoryChartSectionCard extends StatelessWidget {
 }
 
 class HistoryRecordCard extends StatelessWidget {
-  const HistoryRecordCard({
-    super.key,
-    required this.record,
-  });
+  const HistoryRecordCard({super.key, required this.record});
 
   final DiagnosisRecord record;
 
@@ -91,6 +89,7 @@ class HistoryRecordCard extends StatelessWidget {
         path: AppRoutes.reportAnalysis,
         queryParameters: <String, String>{'reportId': record.id},
       ).toString(),
+      extra: ReportViewData.fromSummary(record.rawSummary),
     );
   }
 

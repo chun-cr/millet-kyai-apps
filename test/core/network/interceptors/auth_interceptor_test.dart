@@ -167,6 +167,76 @@ class _UnsafeWrite401Adapter implements HttpClientAdapter {
   }
 }
 
+class _AllowedPostAuthFailureAdapter implements HttpClientAdapter {
+  int postRequestCount = 0;
+  int refreshRequestCount = 0;
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (options.path == '/api/v1/saas/mobile/auth/tokens/refresh') {
+      refreshRequestCount++;
+      expect(options.data, {'refreshToken': 'stale-refresh'});
+      return ResponseBody.fromString(
+        jsonEncode({
+          'code': 0,
+          'message': 'ok',
+          'data': {
+            'accessToken': 'fresh-access',
+            'refreshToken': 'fresh-refresh',
+            'tokenType': 'Bearer',
+            'expiresIn': 7200,
+            'scope': 'profile',
+          },
+        }),
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
+
+    if (options.path == '/protected/mutate') {
+      postRequestCount++;
+      final authorization = options.headers['Authorization'];
+      if (authorization == 'Bearer fresh-access') {
+        return ResponseBody.fromString(
+          jsonEncode({'ok': true}),
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      }
+      return ResponseBody.fromString(
+        jsonEncode({
+          'code': 40101,
+          'message': '未登录',
+          'messageKey': 'AUTH_ACCESS_EXPIRED',
+        }),
+        400,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
+
+    return ResponseBody.fromString(
+      jsonEncode({'message': 'not found'}),
+      404,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+}
+
 Future<void> _seedSession(
   AuthSessionEntity session, {
   DateTime? savedAt,
@@ -347,4 +417,44 @@ void main() {
     );
     expect(await getIt<AuthSessionStore>().refreshToken(), 'stale-refresh');
   });
+
+  test(
+    'refreshes and retries configured post requests after auth envelope failure',
+    () async {
+      await _seedSession(
+        const AuthSessionEntity(
+          accessToken: 'stale-access',
+          refreshToken: 'stale-refresh',
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+          scope: 'mobile',
+        ),
+      );
+
+      final dioClient = getIt<DioClient>();
+      dioClient.dio.interceptors.clear();
+      dioClient.dio.interceptors.add(AuthInterceptor());
+      final adapter = _AllowedPostAuthFailureAdapter();
+      dioClient.dio.httpClientAdapter = adapter;
+
+      final response = await dioClient.dio.post<Map<String, dynamic>>(
+        '/protected/mutate',
+        data: {'value': 'payload'},
+        options: Options(
+          extra: const <String, dynamic>{
+            DioClient.allowUnsafeRetryAfterTokenRefreshExtraKey: true,
+          },
+        ),
+      );
+
+      expect(response.data, {'ok': true});
+      expect(adapter.postRequestCount, 2);
+      expect(adapter.refreshRequestCount, 1);
+      expect(
+        await getIt<AuthSessionStore>().authorizationHeader(),
+        'Bearer fresh-access',
+      );
+      expect(await getIt<AuthSessionStore>().refreshToken(), 'fresh-refresh');
+    },
+  );
 }

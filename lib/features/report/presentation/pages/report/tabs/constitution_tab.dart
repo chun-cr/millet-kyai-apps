@@ -2,11 +2,13 @@ part of '../report_page.dart';
 
 class _Tab2Constitution extends StatefulWidget {
   final ReportViewData viewData;
+  final _ReportPhysiqueAnalysisState physiqueAnalysisState;
   final bool isUnlocked;
   final Future<void> Function() onUnlock;
 
   const _Tab2Constitution({
     required this.viewData,
+    required this.physiqueAnalysisState,
     required this.isUnlocked,
     required this.onUnlock,
   });
@@ -24,6 +26,8 @@ class _Tab2ConstitutionState extends State<_Tab2Constitution>
   late String _radarSignature;
 
   ReportViewData get viewData => widget.viewData;
+  _ReportPhysiqueAnalysisState get physiqueAnalysisState =>
+      widget.physiqueAnalysisState;
   bool get isUnlocked => widget.isUnlocked;
   Future<void> Function() get onUnlock => widget.onUnlock;
 
@@ -260,19 +264,15 @@ class _Tab2ConstitutionState extends State<_Tab2Constitution>
             : null) ??
         _nonEmpty(viewData.primaryConstitution);
     if (name == null) {
-      return context.l10n.reportConstitutionCoreConclusionValue;
+      return '暂无体质数据';
     }
     return '主导偏颇体质：$name';
   }
 
   Widget _buildCoreConclusionBody(BuildContext context) {
-    final fallbackText = context.l10n.reportConstitutionCoreConclusionBody;
     final future = _therapyFuture;
     if (future == null) {
-      return _coreConclusionBodyText(
-        context,
-        viewData.isLive ? '暂无体质特征与调理原则数据。' : fallbackText,
-      );
+      return _coreConclusionBodyText(context, '暂无体质特征与调理原则数据。');
     }
 
     return FutureBuilder<List<Map<String, dynamic>>>(
@@ -460,6 +460,10 @@ class _Tab2ConstitutionState extends State<_Tab2Constitution>
 
   // ── 分析成因 ─────────────────────────────────────────────────────
   Widget _buildCausalAnalysisContent(BuildContext context) {
+    if (viewData.isLive) {
+      return _buildLivePhysiqueFeatureContent(context);
+    }
+
     final l10n = context.l10n;
     final causes = [
       (
@@ -543,8 +547,123 @@ class _Tab2ConstitutionState extends State<_Tab2Constitution>
     );
   }
 
+  Widget _buildLivePhysiqueFeatureContent(BuildContext context) {
+    final l10n = context.l10n;
+    final analysis = physiqueAnalysisState.data;
+    if (analysis == null) {
+      return _buildPhysiqueAnalysisStatusCard(context, physiqueAnalysisState);
+    }
+
+    final rows = <(String, String)>[
+      if (analysis.mainFeature.isNotEmpty)
+        (l10n.reportPhysiqueAnalysisMainFeatureLabel, analysis.mainFeature),
+      if (analysis.bodyFeature.isNotEmpty)
+        (l10n.reportPhysiqueAnalysisBodyFeatureLabel, analysis.bodyFeature),
+      if (analysis.manifestations.isNotEmpty)
+        (
+          l10n.reportPhysiqueAnalysisManifestationsLabel,
+          analysis.manifestations.map((item) => item.name).join('、'),
+        ),
+      if (analysis.diseaseTendencies.isNotEmpty)
+        (
+          l10n.reportPhysiqueAnalysisDiseaseTendenciesLabel,
+          analysis.diseaseTendencies.map((item) => item.name).join('、'),
+        ),
+      if (analysis.diseaseTendencyNote.isNotEmpty)
+        (
+          l10n.reportPhysiqueAnalysisDiseaseTendencyNoteLabel,
+          analysis.diseaseTendencyNote,
+        ),
+      if (analysis.psychologicalFeature.isNotEmpty)
+        (
+          l10n.reportPhysiqueAnalysisPsychologicalFeatureLabel,
+          analysis.psychologicalFeature,
+        ),
+      if (analysis.environmentAdaptability.isNotEmpty)
+        (
+          l10n.reportPhysiqueAnalysisEnvironmentAdaptabilityLabel,
+          analysis.environmentAdaptability,
+        ),
+    ];
+
+    if (rows.isEmpty) {
+      return _buildPhysiqueAnalysisStatusCard(
+        context,
+        const _ReportPhysiqueAnalysisState.empty(),
+      );
+    }
+
+    return _SectionCard(
+      child: Column(
+        children: List.generate(rows.length, (index) {
+          final row = rows[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.only(top: 7),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF6B5B95),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          row.$1,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E1810),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          row.$2,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: const Color(
+                              0xFF3A3028,
+                            ).withValues(alpha: 0.66),
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (index < rows.length - 1) ...[
+                const SizedBox(height: 12),
+                const _IndentedDivider(indent: 16),
+                const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
   // ── 不当举动 ─────────────────────────────────────────────────────
   Widget _buildBadHabitsContent(BuildContext context) {
+    if (viewData.isLive) {
+      final section = physiqueAnalysisState.data?.interpretation;
+      return _buildPhysiqueAnalysisSectionCard(
+        context,
+        physiqueAnalysisState,
+        section,
+      );
+    }
+
     final l10n = context.l10n;
     final habits = [
       (l10n.reportBadHabitOverwork, l10n.reportBadHabitOverworkBody),

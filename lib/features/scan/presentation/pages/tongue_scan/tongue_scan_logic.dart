@@ -52,16 +52,6 @@ bool shouldTrackTongueHold({
 }
 
 @visibleForTesting
-bool shouldShowTongueProgressFeedback({
-  required ScanState scanState,
-  required bool holdEligible,
-}) {
-  return scanState == ScanState.uploading ||
-      scanState == ScanState.completed ||
-      (scanState == ScanState.scanning && holdEligible);
-}
-
-@visibleForTesting
 /// 视觉检测偶尔会丢一两帧，这里给一个极短宽限期，避免进度条频繁清零。
 bool isTongueHoldAliveWithinGrace({
   required bool holdAliveNow,

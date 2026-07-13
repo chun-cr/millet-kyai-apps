@@ -1426,7 +1426,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportConstitutionSpecial => '특품질';
 
   @override
-  String get reportCausalAnalysisTitle => '원인 분석';
+  String get reportCausalAnalysisTitle => '체질 분석';
+
+  @override
+  String get reportPhysiqueAnalysisLoading => '체질 분석 내용을 불러오는 중입니다...';
+
+  @override
+  String get reportPhysiqueAnalysisFailed =>
+      '체질 분석 내용을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get reportPhysiqueAnalysisEmpty => '체질 분석 내용이 없습니다.';
+
+  @override
+  String get reportPhysiqueAnalysisMainFeatureLabel => '주요 특징';
+
+  @override
+  String get reportPhysiqueAnalysisBodyFeatureLabel => '신체 특징';
+
+  @override
+  String get reportPhysiqueAnalysisManifestationsLabel => '자주 보이는 증상';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendenciesLabel => '발병 경향';
+
+  @override
+  String get reportPhysiqueAnalysisDiseaseTendencyNoteLabel => '발병 경향 설명';
+
+  @override
+  String get reportPhysiqueAnalysisPsychologicalFeatureLabel => '심리 특징';
+
+  @override
+  String get reportPhysiqueAnalysisEnvironmentAdaptabilityLabel => '외부 환경 적응력';
 
   @override
   String get reportCauseRoutine => '생활 리듬';
@@ -1484,7 +1515,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportDiseaseEmotionalBody => '불안, 불면, 기분 저하 경향';
 
   @override
-  String get reportBadHabitsTitle => '피해야 할 습관';
+  String get reportBadHabitsTitle => '체질 해석';
 
   @override
   String get reportBadHabitOverwork => '과로';
@@ -1579,7 +1610,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '임신 중, 피부 손상 부위, 생리 기간에는 뜸을 피해주세요. 화상 방지를 위해 온도 조절에 주의해 주세요.';
 
   @override
-  String get reportMentalWellnessTitle => '정신 양생';
+  String get reportMentalWellnessTitle => '조리 참고';
 
   @override
   String get reportMentalTipCalm => '마음을 고요히 유지하기';
@@ -2033,7 +2064,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportUnlockBenefitTherapy =>
-      '맞춤 혈자리 제안, 정신 양생, 사계절 케어 가이드를 받을 수 있습니다';
+      '맞춤 혈자리 제안, 조리 참고, 사계절 케어 가이드를 받을 수 있습니다';
 
   @override
   String get reportUnlockBenefitAdvice => '설상 상세 해석, 식이 방향, 관련 상품 추천을 잠금 해제합니다';
@@ -2090,10 +2121,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '현재는 로컬 모의 구매 흐름이며, 이후 Apple IAP로 교체할 수 있습니다.';
 
   @override
-  String get reportUnlockCausalAnalysisTitle => '원인 심층 분석 잠금 해제';
+  String get reportUnlockCausalAnalysisTitle => '체질 분석 잠금 해제';
 
   @override
-  String get reportUnlockCausalAnalysisSubtitle => '查看体质成因与关键诱因。';
+  String get reportUnlockCausalAnalysisSubtitle => '查看主导体质特征与表现。';
 
   @override
   String get reportUnlockDiseaseTendencyTitle => '질환 경향 알림 잠금 해제';
@@ -2102,10 +2133,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportUnlockDiseaseTendencySubtitle => '查看易发问题与预警重点。';
 
   @override
-  String get reportUnlockBadHabitsTitle => '주의해야 할 행동 안내 잠금 해제';
+  String get reportUnlockBadHabitsTitle => '체질 해석 잠금 해제';
 
   @override
-  String get reportUnlockBadHabitsSubtitle => '查看需要调整的日常习惯。';
+  String get reportUnlockBadHabitsSubtitle => '查看体质解读内容。';
 
   @override
   String get reportUnlockAcupuncturePointsTitle => '맞춤 혈자리 플랜 잠금 해제';
@@ -2114,10 +2145,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportUnlockAcupuncturePointsSubtitle => '查看专属穴位与调理重点。';
 
   @override
-  String get reportUnlockMentalWellnessTitle => '정신 양생 조언 잠금 해제';
+  String get reportUnlockMentalWellnessTitle => '조리 참고 잠금 해제';
 
   @override
-  String get reportUnlockMentalWellnessSubtitle => '查看情绪调养与舒缓建议。';
+  String get reportUnlockMentalWellnessSubtitle => '查看调养参考内容。';
 
   @override
   String get reportUnlockSeasonalCareTitle => '사계절 양생 플랜 잠금 해제';
@@ -2158,7 +2189,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportPremiumTherapySubtitle =>
-      '추천 혈자리, 정신 양생, 사계절 케어 제안을 확인할 수 있습니다.';
+      '추천 혈자리, 조리 참고, 사계절 케어 제안을 확인할 수 있습니다.';
 
   @override
   String get reportPremiumTherapyPreview1 => '추천 포인트: 족삼리 · 기해';
@@ -2297,7 +2328,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportConstitutionInheritedSpecial => '특품질';
 
   @override
-  String get reportConstitutionCausalTitle => '원인 분석';
+  String get reportConstitutionCausalTitle => '체질 분석';
 
   @override
   String get reportConstitutionCauseRoutineTitle => '생활 리듬';
@@ -2355,7 +2386,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportConstitutionDiseaseEmotionDesc => '불안, 불면, 기분 저하 경향';
 
   @override
-  String get reportConstitutionBadHabitsTitle => '피해야 할 습관';
+  String get reportConstitutionBadHabitsTitle => '체질 해석';
 
   @override
   String get reportConstitutionHabitOverworkTitle => '과로';
@@ -2452,7 +2483,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '임신 중, 피부 손상 부위, 생리 기간에는 뜸을 피해주세요. 화상 방지를 위해 온도 조절에 주의해 주세요.';
 
   @override
-  String get reportTherapyMentalTitle => '정신 양생';
+  String get reportTherapyMentalTitle => '조리 참고';
 
   @override
   String get reportTherapyMentalCalmTitle => '마음을 고요히 유지하기';
