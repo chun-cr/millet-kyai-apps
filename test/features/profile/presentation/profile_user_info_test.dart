@@ -61,9 +61,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          profileRepositoryProvider.overrideWithValue(repository),
-        ],
+        overrides: [profileRepositoryProvider.overrideWithValue(repository)],
         child: MaterialApp(
           locale: const Locale('zh'),
           supportedLocales: supportedAppLocales,
@@ -82,6 +80,8 @@ void main() {
     expect(find.text('Amin'), findsOneWidget);
     expect(find.textContaining('Zhang San'), findsOneWidget);
     expect(find.textContaining('138****5678'), findsOneWidget);
+    expect(find.text('健康基底'), findsNothing);
+    expect(find.text('我的调理舱'), findsNothing);
     expect(repository.shippingAddressesFetchCount, 0);
     expect(repository.defaultShippingAddressFetchCount, 0);
     expect(repository.pointsSimpleFetchCount, 0);

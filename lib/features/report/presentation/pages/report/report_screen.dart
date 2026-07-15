@@ -186,6 +186,10 @@ class _ReportScreenState extends State<_ReportScreen>
       navigator.pop();
       return;
     }
+    final container = ProviderScope.containerOf(context, listen: false);
+    container
+      ..invalidate(homeLatestReportSummaryProvider)
+      ..invalidate(homeLatestReportProvider);
     context.go(AppRoutes.home);
   }
 

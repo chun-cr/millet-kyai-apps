@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,7 @@ import 'package:millet_kyai_apps/core/di/injector.dart';
 import 'package:millet_kyai_apps/core/network/dio_client.dart';
 import 'package:millet_kyai_apps/core/platform/app_identity.dart';
 import 'package:millet_kyai_apps/core/router/app_router.dart';
+import 'package:millet_kyai_apps/features/home/presentation/providers/home_hero_provider.dart';
 import 'package:millet_kyai_apps/features/report/presentation/models/report_project_data.dart';
 import 'package:millet_kyai_apps/features/report/presentation/models/report_product_data.dart';
 import 'package:millet_kyai_apps/features/report/presentation/pages/report_checkout_page.dart';
@@ -78,6 +80,7 @@ Future<GoRouter> _pumpReportRouter(
   String initialLocation = AppRoutes.report,
   Size surfaceSize = const Size(1280, 2400),
   Widget Function(BuildContext context, GoRouterState state)? reportBuilder,
+  Widget Function(Widget child)? appWrapper,
 }) async {
   SharedPreferences.setMockInitialValues({});
   await tester.binding.setSurfaceSize(surfaceSize);
@@ -85,6 +88,11 @@ Future<GoRouter> _pumpReportRouter(
   final router = GoRouter(
     initialLocation: initialLocation,
     routes: [
+      GoRoute(
+        path: AppRoutes.home,
+        builder: (context, state) =>
+            const SizedBox(key: ValueKey('report_test_home')),
+      ),
       GoRoute(
         path: AppRoutes.reportProjectDetail,
         builder: (context, state) {
@@ -152,19 +160,18 @@ Future<GoRouter> _pumpReportRouter(
     ],
   );
 
-  await tester.pumpWidget(
-    MaterialApp.router(
-      locale: const Locale('zh'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      routerConfig: router,
-    ),
+  final app = MaterialApp.router(
+    locale: const Locale('zh'),
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    routerConfig: router,
   );
+  await tester.pumpWidget(appWrapper?.call(app) ?? app);
   await tester.pump(const Duration(milliseconds: 900));
   return router;
 }
@@ -191,6 +198,58 @@ void main() {
     await tester.pump();
     await tester.binding.setSurfaceSize(null);
   });
+
+  testWidgets(
+    'returning home from a report refreshes the latest home report data',
+    (tester) async {
+      var summaryLoads = 0;
+      var detailLoads = 0;
+      final router = await _pumpReportRouter(
+        tester,
+        reportBuilder: (context, state) => ReportPage(
+          reportId: 'report-refresh',
+          loadReportViewData: (_) async =>
+              buildReportViewData(id: 'report-refresh'),
+        ),
+        appWrapper: (child) => ProviderScope(
+          overrides: [
+            homeLatestReportSummaryProvider.overrideWith((ref) async {
+              summaryLoads += 1;
+              return null;
+            }),
+            homeLatestReportProvider.overrideWith((ref) async {
+              detailLoads += 1;
+              return null;
+            }),
+          ],
+          child: child,
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ReportPage)),
+        listen: false,
+      );
+
+      await container.read(homeLatestReportSummaryProvider.future);
+      await container.read(homeLatestReportProvider.future);
+      expect(summaryLoads, 1);
+      expect(detailLoads, 1);
+
+      await tester.tap(find.byKey(const ValueKey('report_back_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('report_test_home')), findsOneWidget);
+      await container.read(homeLatestReportSummaryProvider.future);
+      await container.read(homeLatestReportProvider.future);
+      expect(summaryLoads, 2);
+      expect(detailLoads, 2);
+
+      router.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
 
   testWidgets('report page resolves live data when reportId loader succeeds', (
     tester,
