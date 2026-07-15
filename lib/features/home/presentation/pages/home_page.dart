@@ -627,7 +627,9 @@ class _HomePageState extends ConsumerState<HomePage>
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    l10n.homeStatusSummary(constitution, checkedDaysAgo),
+                    checkedDaysAgo == 0
+                        ? l10n.homeStatusSummaryToday(constitution)
+                        : l10n.homeStatusSummary(constitution, checkedDaysAgo),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

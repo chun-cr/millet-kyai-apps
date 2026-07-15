@@ -206,6 +206,14 @@
     }
   },
   "homeGreetingQuestion": "How is your complexion today?",
+  "homeStatusSummaryToday": "{constitution} · Checked today",
+  "@homeStatusSummaryToday": {
+    "placeholders": {
+      "constitution": {
+        "type": "String"
+      }
+    }
+  },
   "homeStatusSummary": "{constitution} · Last checked {days} days ago",
   "@homeStatusSummary": {
     "placeholders": {

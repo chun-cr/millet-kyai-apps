@@ -942,6 +942,12 @@ abstract class AppLocalizations {
   /// **'今日气色如何？'**
   String get homeGreetingQuestion;
 
+  /// No description provided for @homeStatusSummaryToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'{constitution} · 今天检测'**
+  String homeStatusSummaryToday(String constitution);
+
   /// No description provided for @homeStatusSummary.
   ///
   /// In zh, this message translates to:

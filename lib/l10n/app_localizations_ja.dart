@@ -451,6 +451,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeGreetingQuestion => '今日の顔色はいかがですか？';
 
   @override
+  String homeStatusSummaryToday(String constitution) {
+    return '$constitution・本日測定';
+  }
+
+  @override
   String homeStatusSummary(String constitution, int days) {
     return '$constitution・前回のチェックは$days日前';
   }

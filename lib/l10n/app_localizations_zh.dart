@@ -445,6 +445,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeGreetingQuestion => '今日气色如何？';
 
   @override
+  String homeStatusSummaryToday(String constitution) {
+    return '$constitution · 今天检测';
+  }
+
+  @override
   String homeStatusSummary(String constitution, int days) {
     return '$constitution · 上次检测 $days天前';
   }

@@ -61,6 +61,10 @@ void main() {
       adapter.lastRequestOptions.headers['X-Platform'],
       DioClient.platform,
     );
+    expect(
+      adapter.lastRequestOptions.headers['X-Dev-Host-IP'],
+      '192.168.110.6',
+    );
   });
 
   test('rejects insecure API_BASE_URL overrides on web', () {

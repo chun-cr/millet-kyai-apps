@@ -200,6 +200,14 @@
     }
   },
   "homeGreetingQuestion": "今日气色如何？",
+  "homeStatusSummaryToday": "{constitution} · 今天检测",
+  "@homeStatusSummaryToday": {
+    "placeholders": {
+      "constitution": {
+        "type": "String"
+      }
+    }
+  },
   "homeStatusSummary": "{constitution} · 上次检测 {days}天前",
   "@homeStatusSummary": {
     "placeholders": {

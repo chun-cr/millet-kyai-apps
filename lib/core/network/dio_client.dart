@@ -84,7 +84,11 @@ class DioClient {
       BaseOptions(
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
-        headers: {'X-App-Id': AppIdentity.currentAppId, 'X-Platform': platform},
+        headers: {
+          'X-App-Id': AppIdentity.currentAppId,
+          'X-Platform': platform,
+          'X-Dev-Host-IP': '192.168.110.6',
+        },
       ),
     );
     debugPrint('[API_BASE_URL] ${DioClient.baseUrl}');

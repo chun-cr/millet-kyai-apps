@@ -210,6 +210,8 @@ void main() {
     );
     expect(find.text('Checked today'), findsOneWidget);
     expect(find.text('Checked 0 days ago'), findsNothing);
+    expect(find.text('气虚体质 · Checked today'), findsOneWidget);
+    expect(find.textContaining('0 days ago'), findsNothing);
 
     detailCompleter.complete(null);
     await tester.pump();

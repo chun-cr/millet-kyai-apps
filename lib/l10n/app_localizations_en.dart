@@ -464,6 +464,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGreetingQuestion => 'How is your complexion today?';
 
   @override
+  String homeStatusSummaryToday(String constitution) {
+    return '$constitution · Checked today';
+  }
+
+  @override
   String homeStatusSummary(String constitution, int days) {
     return '$constitution · Last checked $days days ago';
   }

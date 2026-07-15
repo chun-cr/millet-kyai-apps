@@ -197,6 +197,14 @@
     }
   },
   "homeGreetingQuestion": "今日の顔色はいかがですか？",
+  "homeStatusSummaryToday": "{constitution}・本日測定",
+  "@homeStatusSummaryToday": {
+    "placeholders": {
+      "constitution": {
+        "type": "String"
+      }
+    }
+  },
   "homeStatusSummary": "{constitution}・前回のチェックは{days}日前",
   "@homeStatusSummary": {
     "placeholders": {
