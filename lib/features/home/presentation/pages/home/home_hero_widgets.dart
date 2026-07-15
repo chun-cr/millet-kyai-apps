@@ -258,7 +258,14 @@ class _CollapsedHeader extends StatelessWidget {
 // TCM Constitution Badge（浅色 Hero 版）
 class _TcmConstitutionBadge extends StatelessWidget {
   final double progress;
-  const _TcmConstitutionBadge({required this.progress});
+  final int? score;
+  final String? constitution;
+
+  const _TcmConstitutionBadge({
+    required this.progress,
+    required this.score,
+    required this.constitution,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +283,7 @@ class _TcmConstitutionBadge extends StatelessWidget {
                 CustomPaint(
                   size: const Size(80, 80),
                   painter: _ScoreRingPainter(
-                    progress: progress * 0.86,
+                    progress: progress * ((score ?? 0) / 100),
                     trackColor: AppColors.primary.withValues(alpha: 0.12),
                     progressStart: const Color(0xFF2D6A4F),
                     progressEnd: const Color(0xFF7EC8A0),
@@ -286,7 +293,7 @@ class _TcmConstitutionBadge extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${(86 * progress).round()}',
+                      score == null ? '--' : '${(score! * progress).round()}',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -308,40 +315,31 @@ class _TcmConstitutionBadge extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 5),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(99),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.2),
-                width: 1,
+          if (constitution != null) ...[
+            const SizedBox(height: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                constitution!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
-            child: Text(
-              context.l10n.homeBalancedConstitution,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10,
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.l10n.homeBalanceState,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 9,
-              color: AppColors.textHint.withValues(alpha: 0.8),
-            ),
-          ),
+          ],
         ],
       ),
     );

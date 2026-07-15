@@ -5,7 +5,6 @@
   "appBrandSuffix": " 健康",
   "bottomNavHome": "ホーム",
   "bottomNavScan": "スキャン",
-  "bottomNavReport": "レポート",
   "bottomNavProfile": "プロフィール",
   "commonCancel": "キャンセル",
   "commonConfirm": "確認",
@@ -181,6 +180,22 @@
       }
     }
   },
+  "homeGreetingAfternoon": "こんにちは、{name}さん",
+  "@homeGreetingAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingEvening": "こんばんは、{name}さん",
+  "@homeGreetingEvening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeGreetingQuestion": "今日の顔色はいかがですか？",
   "homeStatusSummary": "{constitution}・前回のチェックは{days}日前",
   "@homeStatusSummary": {
@@ -202,13 +217,6 @@
   "homeQuickScanTongueSub": "舌苔を確認",
   "homeQuickScanPalmTitle": "掌紋チェック",
   "homeQuickScanPalmSub": "掌紋を見る",
-  "homeFunctionNavTitle": "機能一覧",
-  "homeFunctionConstitution": "体質分析",
-  "homeFunctionMeridianTherapy": "経絡調理",
-  "homeFunctionDietAdvice": "食事提案",
-  "homeFunctionMentalWellness": "精神養生",
-  "homeFunctionSeasonalCare": "四季養生",
-  "homeFunctionHistory": "履歴一覧",
   "homeTodayCareTitle": "本日の養生",
   "homeTodayCareCount": "おすすめ2件",
   "homeTipDietTag": "食事",
@@ -222,6 +230,27 @@
   "homeBalancedConstitution": "平和体質",
   "homeBalanceState": "陰陽のバランスは比較的安定しています",
   "homeStartFullScan": "フルスマート診断を開始",
+  "homeLatestReportTitle": "最新の体質レポート",
+  "homeLatestReportCheckedToday": "本日測定",
+  "homeLatestReportCheckedDays": "{days}日前に測定",
+  "@homeLatestReportCheckedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLatestReportNoResult": "体質結果はありません",
+  "homeLatestReportRadarTitle": "体質傾向レーダー",
+  "homeLatestReportRadarHint": "数値が高いほど傾向が強くなります",
+  "homeLatestReportNoRadarData": "このレポートには体質スコアがありません",
+  "homeLatestReportViewFull": "詳細レポートを見る",
+  "homeLatestReportViewFullSubtitle": "詳しい分析と提案を確認",
+  "homeLatestReportCompareHistory": "過去レポートと比較",
+  "homeLatestReportCompareHistorySubtitle": "体質の変化を確認",
+  "homeLatestReportEmptyTitle": "体質レポートはまだありません",
+  "homeLatestReportEmptySubtitle": "スマート診断を完了すると、ここで体質分析を確認できます。",
+  "homeLatestReportLoadFailed": "最新レポートを読み込めませんでした",
   "constitutionBalanced": "平和質",
   "constitutionQiDeficiency": "気虚質",
   "constitutionDampness": "痰湿質",

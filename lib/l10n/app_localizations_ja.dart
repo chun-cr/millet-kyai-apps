@@ -376,9 +376,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get bottomNavScan => 'スキャン';
 
   @override
-  String get bottomNavReport => 'レポート';
-
-  @override
   String get bottomNavProfile => 'プロフィール';
 
   @override
@@ -441,6 +438,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String homeGreetingAfternoon(String name) {
+    return 'こんにちは、$nameさん';
+  }
+
+  @override
+  String homeGreetingEvening(String name) {
+    return 'こんばんは、$nameさん';
+  }
+
+  @override
   String get homeGreetingQuestion => '今日の顔色はいかがですか？';
 
   @override
@@ -474,27 +481,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get homeQuickScanPalmSub => '掌紋を見る';
-
-  @override
-  String get homeFunctionNavTitle => '機能一覧';
-
-  @override
-  String get homeFunctionConstitution => '体質分析';
-
-  @override
-  String get homeFunctionMeridianTherapy => '経絡調理';
-
-  @override
-  String get homeFunctionDietAdvice => '食事提案';
-
-  @override
-  String get homeFunctionMentalWellness => '精神養生';
-
-  @override
-  String get homeFunctionSeasonalCare => '四季養生';
-
-  @override
-  String get homeFunctionHistory => '履歴一覧';
 
   @override
   String get homeTodayCareTitle => '本日の養生';
@@ -536,6 +522,50 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get homeStartFullScan => 'フルスマート診断を開始';
+
+  @override
+  String get homeLatestReportTitle => '最新の体質レポート';
+
+  @override
+  String get homeLatestReportCheckedToday => '本日測定';
+
+  @override
+  String homeLatestReportCheckedDays(int days) {
+    return '$days日前に測定';
+  }
+
+  @override
+  String get homeLatestReportNoResult => '体質結果はありません';
+
+  @override
+  String get homeLatestReportRadarTitle => '体質傾向レーダー';
+
+  @override
+  String get homeLatestReportRadarHint => '数値が高いほど傾向が強くなります';
+
+  @override
+  String get homeLatestReportNoRadarData => 'このレポートには体質スコアがありません';
+
+  @override
+  String get homeLatestReportViewFull => '詳細レポートを見る';
+
+  @override
+  String get homeLatestReportViewFullSubtitle => '詳しい分析と提案を確認';
+
+  @override
+  String get homeLatestReportCompareHistory => '過去レポートと比較';
+
+  @override
+  String get homeLatestReportCompareHistorySubtitle => '体質の変化を確認';
+
+  @override
+  String get homeLatestReportEmptyTitle => '体質レポートはまだありません';
+
+  @override
+  String get homeLatestReportEmptySubtitle => 'スマート診断を完了すると、ここで体質分析を確認できます。';
+
+  @override
+  String get homeLatestReportLoadFailed => '最新レポートを読み込めませんでした';
 
   @override
   String get homeLastReportInsight => '気虚傾向・脾胃虚弱';

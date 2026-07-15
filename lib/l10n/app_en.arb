@@ -161,7 +161,6 @@
   "passwordStrengthVeryStrong": "Very strong",
   "bottomNavHome": "Home",
   "bottomNavScan": "Scan",
-  "bottomNavReport": "Report",
   "bottomNavProfile": "Profile",
   "commonCancel": "Cancel",
   "commonConfirm": "Confirm",
@@ -190,6 +189,22 @@
       }
     }
   },
+  "homeGreetingAfternoon": "Good afternoon, {name}",
+  "@homeGreetingAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingEvening": "Good evening, {name}",
+  "@homeGreetingEvening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeGreetingQuestion": "How is your complexion today?",
   "homeStatusSummary": "{constitution} · Last checked {days} days ago",
   "@homeStatusSummary": {
@@ -211,13 +226,6 @@
   "homeQuickScanTongueSub": "Observe coating",
   "homeQuickScanPalmTitle": "Palm Reading",
   "homeQuickScanPalmSub": "Review palm lines",
-  "homeFunctionNavTitle": "Feature Navigation",
-  "homeFunctionConstitution": "Constitution Analysis",
-  "homeFunctionMeridianTherapy": "Meridian Therapy",
-  "homeFunctionDietAdvice": "Dietary Advice",
-  "homeFunctionMentalWellness": "Mental Wellness",
-  "homeFunctionSeasonalCare": "Seasonal Care",
-  "homeFunctionHistory": "History",
   "homeTodayCareTitle": "Today’s Wellness",
   "homeTodayCareCount": "Two tips",
   "homeTipDietTag": "Diet",
@@ -231,6 +239,27 @@
   "homeBalancedConstitution": "Balanced Constitution",
   "homeBalanceState": "Yin and yang are relatively balanced",
   "homeStartFullScan": "Start Full Smart Scan",
+  "homeLatestReportTitle": "Latest Constitution Report",
+  "homeLatestReportCheckedToday": "Checked today",
+  "homeLatestReportCheckedDays": "Checked {days} days ago",
+  "@homeLatestReportCheckedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLatestReportNoResult": "No constitution result",
+  "homeLatestReportRadarTitle": "Constitution Tendency Radar",
+  "homeLatestReportRadarHint": "Higher values indicate a stronger tendency",
+  "homeLatestReportNoRadarData": "No constitution scores are available for this report",
+  "homeLatestReportViewFull": "View Full Report",
+  "homeLatestReportViewFullSubtitle": "See detailed analysis and advice",
+  "homeLatestReportCompareHistory": "Compare Past Reports",
+  "homeLatestReportCompareHistorySubtitle": "Review constitution changes over time",
+  "homeLatestReportEmptyTitle": "No constitution report yet",
+  "homeLatestReportEmptySubtitle": "Complete a smart scan to see your constitution analysis here.",
+  "homeLatestReportLoadFailed": "Unable to load the latest report",
   "homeLastReportInsight": "Qi Deficiency Tendency · Weak Spleen and Stomach",
   "homeLastReportSummary": "Spleen qi is weak and transport function is reduced. The complexion appears slightly yellow, and the tongue is pale with a white coating. Focus on strengthening spleen qi and maintaining a regular routine.",
   "profileTitle": "Profile",

@@ -5,7 +5,6 @@
   "appBrandSuffix": " 건강",
   "bottomNavHome": "홈",
   "bottomNavScan": "스캔",
-  "bottomNavReport": "리포트",
   "bottomNavProfile": "프로필",
   "commonCancel": "취소",
   "commonConfirm": "확인",
@@ -181,6 +180,22 @@
       }
     }
   },
+  "homeGreetingAfternoon": "좋은 오후입니다, {name}님",
+  "@homeGreetingAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingEvening": "좋은 저녁입니다, {name}님",
+  "@homeGreetingEvening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeGreetingQuestion": "오늘 안색은 어떠신가요?",
   "homeStatusSummary": "{constitution} · 마지막 검사 {days}일 전",
   "@homeStatusSummary": {
@@ -202,13 +217,6 @@
   "homeQuickScanTongueSub": "설태 보기",
   "homeQuickScanPalmTitle": "손바닥 경락",
   "homeQuickScanPalmSub": "손금 보기",
-  "homeFunctionNavTitle": "기능 바로가기",
-  "homeFunctionConstitution": "체질 분석",
-  "homeFunctionMeridianTherapy": "경락 관리",
-  "homeFunctionDietAdvice": "식이 제안",
-  "homeFunctionMentalWellness": "정신 양생",
-  "homeFunctionSeasonalCare": "사계절 관리",
-  "homeFunctionHistory": "기록 보기",
   "homeTodayCareTitle": "오늘의 건강 팁",
   "homeTodayCareCount": "추천 2개",
   "homeTipDietTag": "식이",
@@ -222,6 +230,27 @@
   "homeBalancedConstitution": "평화 체질",
   "homeBalanceState": "음양 균형이 비교적 안정적입니다",
   "homeStartFullScan": "전체 스마트 진단 시작",
+  "homeLatestReportTitle": "최근 체질 리포트",
+  "homeLatestReportCheckedToday": "오늘 검사",
+  "homeLatestReportCheckedDays": "{days}일 전에 검사",
+  "@homeLatestReportCheckedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLatestReportNoResult": "체질 결과 없음",
+  "homeLatestReportRadarTitle": "체질 경향 레이더",
+  "homeLatestReportRadarHint": "수치가 높을수록 경향이 뚜렷합니다",
+  "homeLatestReportNoRadarData": "이 리포트에는 체질 점수 데이터가 없습니다",
+  "homeLatestReportViewFull": "전체 리포트 보기",
+  "homeLatestReportViewFullSubtitle": "상세 분석과 조언 확인",
+  "homeLatestReportCompareHistory": "과거 리포트 비교",
+  "homeLatestReportCompareHistorySubtitle": "체질 변화 추이 확인",
+  "homeLatestReportEmptyTitle": "아직 체질 리포트가 없습니다",
+  "homeLatestReportEmptySubtitle": "스마트 검사를 완료하면 이곳에서 체질 분석을 확인할 수 있습니다.",
+  "homeLatestReportLoadFailed": "최근 리포트를 불러오지 못했습니다",
   "homeLastReportInsight": "기허 경향 · 비위 허약",
   "homeLastReportSummary": "비기(脾氣)가 부족하고 운화 기능이 다소 저하되어 있습니다. 얼굴빛이 약간 누렇고, 혀는 담하며 백태가 보입니다. 비기를 보하고 규칙적인 생활을 유지해 주세요.",
   "constitutionBalanced": "평화질",

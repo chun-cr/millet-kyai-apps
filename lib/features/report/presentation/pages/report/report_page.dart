@@ -21,6 +21,7 @@ import 'package:millet_kyai_apps/features/report/presentation/models/report_proj
 import 'package:millet_kyai_apps/features/report/presentation/models/report_product_data.dart';
 import 'package:millet_kyai_apps/features/report/presentation/pages/report/report_entry_resolver.dart';
 import 'package:millet_kyai_apps/features/report/presentation/pages/report/report_view_data.dart';
+import 'package:millet_kyai_apps/features/report/presentation/widgets/constitution_radar_painter.dart';
 import 'package:millet_kyai_apps/l10n/app_localizations.dart';
 
 export 'report_view_data.dart';

@@ -1,20 +1,23 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:millet_kyai_apps/core/layout/app_layout.dart';
 import 'package:millet_kyai_apps/core/l10n/formatters.dart';
 import 'package:millet_kyai_apps/core/l10n/l10n.dart';
-import 'package:millet_kyai_apps/core/l10n/seasonal_context.dart';
 import 'package:millet_kyai_apps/core/router/app_router.dart';
-import 'package:millet_kyai_apps/features/history/presentation/pages/history/history_page.dart';
+import 'package:millet_kyai_apps/core/widgets/app_skeleton.dart';
+import 'package:millet_kyai_apps/features/home/presentation/providers/home_hero_provider.dart';
+import 'package:millet_kyai_apps/features/profile/domain/entities/profile_me_entity.dart';
 import 'package:millet_kyai_apps/features/profile/presentation/pages/profile_page.dart';
+import 'package:millet_kyai_apps/features/profile/presentation/providers/profile_repository_provider.dart';
+import 'package:millet_kyai_apps/features/report/data/models/report_detail.dart';
+import 'package:millet_kyai_apps/features/report/presentation/widgets/constitution_radar_painter.dart';
 
 part 'home/home_hero_widgets.dart';
 part 'home/home_scan_widgets.dart';
 part 'home/home_report_widgets.dart';
-part 'home/home_function_widgets.dart';
-part 'home/home_tip_widgets.dart';
 part 'home/home_shared_widgets.dart';
 
 // ─── Design Tokens ────────────────────────────────────────────────
@@ -90,7 +93,7 @@ class _MainShellState extends State<MainShell> {
 
   Widget _buildCurrentPage() {
     switch (_currentIndex) {
-      case 3:
+      case 2:
         return const ProfilePage();
       case 0:
       default:
@@ -106,8 +109,6 @@ class _MainShellState extends State<MainShell> {
     void handleDestinationTap(int index) {
       if (index == 1) {
         context.push(AppRoutes.scan);
-      } else if (index == 2) {
-        context.push(AppRoutes.report);
       } else {
         setState(() => _currentIndex = index);
       }
@@ -154,8 +155,6 @@ class _TabletNavigationRail extends StatelessWidget {
       case 1:
         return l10n.bottomNavScan;
       case 2:
-        return l10n.bottomNavReport;
-      case 3:
         return l10n.bottomNavProfile;
       default:
         return '';
@@ -207,7 +206,6 @@ class _BottomNav extends StatelessWidget {
   static const _items = [
     (Icons.home_outlined, Icons.home_rounded),
     (Icons.document_scanner_outlined, Icons.document_scanner),
-    (Icons.assignment_outlined, Icons.assignment_rounded),
     (Icons.person_outline, Icons.person_rounded),
   ];
 
@@ -219,8 +217,6 @@ class _BottomNav extends StatelessWidget {
       case 1:
         return l10n.bottomNavScan;
       case 2:
-        return l10n.bottomNavReport;
-      case 3:
         return l10n.bottomNavProfile;
       default:
         return '';
@@ -375,13 +371,14 @@ class _BottomNav extends StatelessWidget {
 }
 
 // ─── Home Page ─────────────────────────────────────────────────────
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageState extends ConsumerState<HomePage>
+    with TickerProviderStateMixin {
   late AnimationController _scoreController;
   late Animation<double> _scoreAnim;
 
@@ -408,19 +405,38 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _handleScanReveal() async {
+    await _pushAndRefresh(AppRoutes.scan);
+  }
+
+  Future<void> _pushAndRefresh(String route) async {
     if (!mounted) return;
-    await context.push(AppRoutes.scan);
+    await context.push(route);
+    if (mounted) {
+      ref.invalidate(homeLatestReportSummaryProvider);
+      ref.invalidate(homeLatestReportProvider);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final layout = AppLayoutMetrics.of(context);
+    final profileState = ref.watch(profileMeProvider);
+    final profile = profileState.asData?.value;
+    final latestSummaryState = ref.watch(homeLatestReportSummaryProvider);
+    final latestReportState = ref.watch(homeLatestReportProvider);
+    final latestReport =
+        latestSummaryState.asData?.value ??
+        latestReportState.asData?.value?.summary;
 
     return Scaffold(
       backgroundColor: AppColors.softBg,
       body: CustomScrollView(
         slivers: [
-          _buildSliverAppBar(),
+          _buildSliverAppBar(
+            profile: profile,
+            isProfileLoading: profileState.isLoading && !profileState.hasValue,
+            latestReport: latestReport,
+          ),
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
@@ -452,11 +468,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             children: [
                               _buildQuickScan(),
                               const SizedBox(height: 20),
-                              _buildLastReport(),
-                              const SizedBox(height: 20),
-                              _buildFunctionGrid(),
-                              const SizedBox(height: 20),
-                              _buildHealthTips(),
+                              _buildLastReport(
+                                summaryState: latestSummaryState,
+                                reportState: latestReportState,
+                              ),
                               const SizedBox(height: 8),
                             ],
                           ),
@@ -474,7 +489,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ── Sliver App Bar ──────────────────────────────────────────────
-  Widget _buildSliverAppBar() {
+  Widget _buildSliverAppBar({
+    required ProfileMeEntity? profile,
+    required bool isProfileLoading,
+    required DiagnosisReportSummary? latestReport,
+  }) {
     return SliverAppBar(
       expandedHeight: 228,
       pinned: true,
@@ -505,14 +524,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ],
       flexibleSpace: _HeroFlexibleSpace(
         collapsedHeader: const _CollapsedHeader(),
-        greeting: _buildGreeting(),
-        scoreRing: _buildScoreRing(),
+        greeting: _buildGreeting(
+          profile: profile,
+          isProfileLoading: isProfileLoading,
+          latestReport: latestReport,
+        ),
+        scoreRing: _buildScoreRing(latestReport),
       ),
     );
   }
 
-  Widget _buildGreeting() {
+  Widget _buildGreeting({
+    required ProfileMeEntity? profile,
+    required bool isProfileLoading,
+    required DiagnosisReportSummary? latestReport,
+  }) {
     final l10n = context.l10n;
+    final name = _displayName(profile);
+    final constitution = _constitutionName(latestReport);
+    final checkedDaysAgo = _daysSinceLastCheck(latestReport);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -540,17 +570,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l10n.homeGreetingMorning(l10n.profileDisplayName),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                      letterSpacing: 0.3,
+                  if (name != null)
+                    Text(
+                      _greetingForCurrentTime(name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        letterSpacing: 0.3,
+                      ),
+                    )
+                  else if (isProfileLoading)
+                    const AppShimmer(
+                      child: SkeletonLine(width: 112, height: 16),
                     ),
-                  ),
                   const SizedBox(height: 2),
                   Text(
                     l10n.homeGreetingQuestion,
@@ -566,44 +601,46 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(99),
-            border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.18),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primary,
-                ),
+        if (constitution != null && checkedDaysAgo != null) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.18),
+                width: 1,
               ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  l10n.homeStatusSummary(l10n.homeBalancedConstitution, 3),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11.5,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
                     color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    l10n.homeStatusSummary(constitution, checkedDaysAgo),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 10),
         Row(
           children: [
@@ -630,11 +667,63 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildScoreRing() {
+  String? _displayName(ProfileMeEntity? profile) {
+    for (final value in [
+      profile?.nickname,
+      profile?.realName,
+      profile?.userNo,
+    ]) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        return trimmed;
+      }
+    }
+    return null;
+  }
+
+  String _greetingForCurrentTime(String name) {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return context.l10n.homeGreetingMorning(name);
+    }
+    if (hour >= 12 && hour < 18) {
+      return context.l10n.homeGreetingAfternoon(name);
+    }
+    return context.l10n.homeGreetingEvening(name);
+  }
+
+  String? _constitutionName(DiagnosisReportSummary? report) {
+    final constitution = report?.physiqueName.trim();
+    return constitution == null || constitution.isEmpty ? null : constitution;
+  }
+
+  int? _daysSinceLastCheck(DiagnosisReportSummary? report) {
+    final value = report?.testTime.trim();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    final milliseconds = int.tryParse(value);
+    final checkedAt =
+        DateTime.tryParse(value) ??
+        (milliseconds == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(milliseconds));
+    if (checkedAt == null) {
+      return null;
+    }
+    final today = DateUtils.dateOnly(DateTime.now());
+    final checkedDay = DateUtils.dateOnly(checkedAt.toLocal());
+    return math.max(0, today.difference(checkedDay).inDays).toInt();
+  }
+
+  Widget _buildScoreRing(DiagnosisReportSummary? latestReport) {
     return AnimatedBuilder(
       animation: _scoreAnim,
-      builder: (context, child) =>
-          _TcmConstitutionBadge(progress: _scoreAnim.value),
+      builder: (context, child) => _TcmConstitutionBadge(
+        progress: _scoreAnim.value,
+        score: latestReport?.healthScore.clamp(0, 100).round(),
+        constitution: _constitutionName(latestReport),
+      ),
     );
   }
 
@@ -687,7 +776,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(width: 8),
-              _TcmTag(label: l10n.homeQuickScanTag, color: AppColors.tcmGold),
+              SizedBox(
+                width: 104,
+                child: _TcmTag(
+                  label: l10n.homeQuickScanTag,
+                  color: AppColors.tcmGold,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -703,9 +798,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     color: s.$3,
                     icon: s.$4,
                     onTap: () {
-                      if (i == 0) context.push(AppRoutes.scanFace);
-                      if (i == 1) context.push(AppRoutes.scanTongue);
-                      if (i == 2) context.push(AppRoutes.scanPalm);
+                      if (i == 0) _pushAndRefresh(AppRoutes.scanFace);
+                      if (i == 1) _pushAndRefresh(AppRoutes.scanTongue);
+                      if (i == 2) _pushAndRefresh(AppRoutes.scanPalm);
                     },
                   ),
                 ),
@@ -720,152 +815,52 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ── Last Report ─────────────────────────────────────────────────
-  Widget _buildLastReport() {
-    return _LastReportCard();
+  Widget _buildLastReport({
+    required AsyncValue<DiagnosisReportSummary?> summaryState,
+    required AsyncValue<HomeLatestReportData?> reportState,
+  }) {
+    final report = reportState.asData?.value;
+    if (report != null) {
+      return _LastReportCard(
+        summary: report.summary,
+        report: report,
+        onOpenReport: () => _openLatestReport(report.reportId),
+        onCompareHistory: () => _pushAndRefresh(AppRoutes.history),
+      );
+    }
+
+    return summaryState.when(
+      data: (summary) => summary == null
+          ? _LastReportEmptyCard(onStartScan: _handleScanReveal)
+          : _LastReportCard(
+              summary: summary,
+              isDetailLoading: reportState.isLoading,
+              onRetryDetail: reportState.hasError
+                  ? () => ref.invalidate(homeLatestReportProvider)
+                  : null,
+              onOpenReport: () => _openLatestReport(summary.id),
+              onCompareHistory: () => _pushAndRefresh(AppRoutes.history),
+            ),
+      loading: () => const _LastReportLoadingCard(),
+      error: (_, _) => _LastReportErrorCard(
+        onRetry: () {
+          ref.invalidate(homeLatestReportSummaryProvider);
+          ref.invalidate(homeLatestReportProvider);
+        },
+      ),
+    );
   }
 
-  // ── Function Grid ───────────────────────────────────────────────
-  Widget _buildFunctionGrid() {
-    final l10n = context.l10n;
-    final items = [
-      (
-        Icons.biotech_outlined,
-        l10n.homeFunctionConstitution,
-        const Color(0xFFE8F5EE),
-      ),
-      (
-        Icons.spa_outlined,
-        l10n.homeFunctionMeridianTherapy,
-        const Color(0xFFE4F7F1),
-      ),
-      (
-        Icons.restaurant_menu_outlined,
-        l10n.homeFunctionDietAdvice,
-        const Color(0xFFFAF3E0),
-      ),
-      (
-        Icons.self_improvement_outlined,
-        l10n.homeFunctionMentalWellness,
-        const Color(0xFFF0EDF8),
-      ),
-      (
-        Icons.wb_sunny_outlined,
-        l10n.homeFunctionSeasonalCare,
-        const Color(0xFFFAEDE7),
-      ),
-      (
-        Icons.history_outlined,
-        l10n.homeFunctionHistory,
-        const Color(0xFFF1EEE6),
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(title: l10n.homeFunctionNavTitle),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth >= 760 ? 6 : 3;
-            final aspectRatio = crossAxisCount == 6 ? 0.95 : 1.1;
-
-            return GridView.count(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: aspectRatio,
-              children: items
-                  .map(
-                    (item) => _FunctionCell(
-                      icon: item.$1,
-                      label: item.$2,
-                      bgColor: item.$3,
-                    ),
-                  )
-                  .toList(),
-            );
-          },
-        ),
-      ],
+  Future<void> _openLatestReport(String reportId) {
+    return _pushAndRefresh(
+      Uri(
+        path: AppRoutes.reportAnalysis,
+        queryParameters: {'reportId': reportId},
+      ).toString(),
     );
   }
 
   // ── Health Tips ─────────────────────────────────────────────────
-  Widget _buildHealthTips() {
-    final l10n = context.l10n;
-    final seasonalTag = l10n.seasonalTagLabel(SeasonalContext.now());
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _SectionTitle(title: l10n.homeTodayCareTitle),
-            const SizedBox(width: 8),
-            Flexible(
-              child: _TcmTag(label: seasonalTag, color: AppColors.tcmGold),
-            ),
-            const Spacer(),
-            Flexible(
-              child: Text(
-                l10n.homeTodayCareCount,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textHint.withValues(alpha: 0.9),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cards = [
-              _HealthTipCard(
-                tag: l10n.homeTipDietTag,
-                wuxing: l10n.homeTipDietWuxing,
-                wuxingColor: const Color(0xFFD4A04A),
-                tagColor: const Color(0xFF0D7A5A),
-                tip: l10n.homeTipDietBody,
-                icon: Icons.restaurant_outlined,
-              ),
-              _HealthTipCard(
-                tag: l10n.homeTipRoutineTag,
-                wuxing: l10n.homeTipRoutineWuxing,
-                wuxingColor: const Color(0xFF4A7FA8),
-                tagColor: const Color(0xFF2D6A4F),
-                tip: l10n.homeTipRoutineBody,
-                icon: Icons.bedtime_outlined,
-              ),
-            ];
-
-            if (constraints.maxWidth < 720) {
-              return Column(
-                children: [cards[0], const SizedBox(height: 10), cards[1]],
-              );
-            }
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: cards[0]),
-                const SizedBox(width: 12),
-                Expanded(child: cards[1]),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
 }
 
 // ─── Hero Flexible Space ───────────────────────────────────────────

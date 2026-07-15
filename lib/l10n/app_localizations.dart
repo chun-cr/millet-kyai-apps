@@ -804,12 +804,6 @@ abstract class AppLocalizations {
   /// **'扫描'**
   String get bottomNavScan;
 
-  /// No description provided for @bottomNavReport.
-  ///
-  /// In zh, this message translates to:
-  /// **'报告'**
-  String get bottomNavReport;
-
   /// No description provided for @bottomNavProfile.
   ///
   /// In zh, this message translates to:
@@ -930,6 +924,18 @@ abstract class AppLocalizations {
   /// **'早安，{name}'**
   String homeGreetingMorning(String name);
 
+  /// No description provided for @homeGreetingAfternoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'下午好，{name}'**
+  String homeGreetingAfternoon(String name);
+
+  /// No description provided for @homeGreetingEvening.
+  ///
+  /// In zh, this message translates to:
+  /// **'晚上好，{name}'**
+  String homeGreetingEvening(String name);
+
   /// No description provided for @homeGreetingQuestion.
   ///
   /// In zh, this message translates to:
@@ -995,48 +1001,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'看掌纹'**
   String get homeQuickScanPalmSub;
-
-  /// No description provided for @homeFunctionNavTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'功能导航'**
-  String get homeFunctionNavTitle;
-
-  /// No description provided for @homeFunctionConstitution.
-  ///
-  /// In zh, this message translates to:
-  /// **'体质分析'**
-  String get homeFunctionConstitution;
-
-  /// No description provided for @homeFunctionMeridianTherapy.
-  ///
-  /// In zh, this message translates to:
-  /// **'经络调理'**
-  String get homeFunctionMeridianTherapy;
-
-  /// No description provided for @homeFunctionDietAdvice.
-  ///
-  /// In zh, this message translates to:
-  /// **'饮食建议'**
-  String get homeFunctionDietAdvice;
-
-  /// No description provided for @homeFunctionMentalWellness.
-  ///
-  /// In zh, this message translates to:
-  /// **'精神养生'**
-  String get homeFunctionMentalWellness;
-
-  /// No description provided for @homeFunctionSeasonalCare.
-  ///
-  /// In zh, this message translates to:
-  /// **'四季保养'**
-  String get homeFunctionSeasonalCare;
-
-  /// No description provided for @homeFunctionHistory.
-  ///
-  /// In zh, this message translates to:
-  /// **'历史记录'**
-  String get homeFunctionHistory;
 
   /// No description provided for @homeTodayCareTitle.
   ///
@@ -1115,6 +1079,90 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'开始全套智能检测'**
   String get homeStartFullScan;
+
+  /// No description provided for @homeLatestReportTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近一次体质报告'**
+  String get homeLatestReportTitle;
+
+  /// No description provided for @homeLatestReportCheckedToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测时间：今天'**
+  String get homeLatestReportCheckedToday;
+
+  /// No description provided for @homeLatestReportCheckedDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测时间：{days}天前'**
+  String homeLatestReportCheckedDays(int days);
+
+  /// No description provided for @homeLatestReportNoResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无体质结论'**
+  String get homeLatestReportNoResult;
+
+  /// No description provided for @homeLatestReportRadarTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'体质倾向雷达图'**
+  String get homeLatestReportRadarTitle;
+
+  /// No description provided for @homeLatestReportRadarHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'数值越高，倾向越明显'**
+  String get homeLatestReportRadarHint;
+
+  /// No description provided for @homeLatestReportNoRadarData.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次报告暂无体质分数据'**
+  String get homeLatestReportNoRadarData;
+
+  /// No description provided for @homeLatestReportViewFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看完整报告'**
+  String get homeLatestReportViewFull;
+
+  /// No description provided for @homeLatestReportViewFullSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看详细分析与建议'**
+  String get homeLatestReportViewFullSubtitle;
+
+  /// No description provided for @homeLatestReportCompareHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'对比历史报告'**
+  String get homeLatestReportCompareHistory;
+
+  /// No description provided for @homeLatestReportCompareHistorySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看体质变化趋势'**
+  String get homeLatestReportCompareHistorySubtitle;
+
+  /// No description provided for @homeLatestReportEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有体质报告'**
+  String get homeLatestReportEmptyTitle;
+
+  /// No description provided for @homeLatestReportEmptySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成一次智能检测后，可在这里查看体质分析。'**
+  String get homeLatestReportEmptySubtitle;
+
+  /// No description provided for @homeLatestReportLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新报告加载失败'**
+  String get homeLatestReportLoadFailed;
 
   /// No description provided for @homeLastReportInsight.
   ///

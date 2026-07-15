@@ -376,9 +376,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get bottomNavScan => '스캔';
 
   @override
-  String get bottomNavReport => '리포트';
-
-  @override
   String get bottomNavProfile => '프로필';
 
   @override
@@ -441,6 +438,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String homeGreetingAfternoon(String name) {
+    return '좋은 오후입니다, $name님';
+  }
+
+  @override
+  String homeGreetingEvening(String name) {
+    return '좋은 저녁입니다, $name님';
+  }
+
+  @override
   String get homeGreetingQuestion => '오늘 안색은 어떠신가요?';
 
   @override
@@ -474,27 +481,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeQuickScanPalmSub => '손금 보기';
-
-  @override
-  String get homeFunctionNavTitle => '기능 바로가기';
-
-  @override
-  String get homeFunctionConstitution => '체질 분석';
-
-  @override
-  String get homeFunctionMeridianTherapy => '경락 관리';
-
-  @override
-  String get homeFunctionDietAdvice => '식이 제안';
-
-  @override
-  String get homeFunctionMentalWellness => '정신 양생';
-
-  @override
-  String get homeFunctionSeasonalCare => '사계절 관리';
-
-  @override
-  String get homeFunctionHistory => '기록 보기';
 
   @override
   String get homeTodayCareTitle => '오늘의 건강 팁';
@@ -536,6 +522,51 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeStartFullScan => '전체 스마트 진단 시작';
+
+  @override
+  String get homeLatestReportTitle => '최근 체질 리포트';
+
+  @override
+  String get homeLatestReportCheckedToday => '오늘 검사';
+
+  @override
+  String homeLatestReportCheckedDays(int days) {
+    return '$days일 전에 검사';
+  }
+
+  @override
+  String get homeLatestReportNoResult => '체질 결과 없음';
+
+  @override
+  String get homeLatestReportRadarTitle => '체질 경향 레이더';
+
+  @override
+  String get homeLatestReportRadarHint => '수치가 높을수록 경향이 뚜렷합니다';
+
+  @override
+  String get homeLatestReportNoRadarData => '이 리포트에는 체질 점수 데이터가 없습니다';
+
+  @override
+  String get homeLatestReportViewFull => '전체 리포트 보기';
+
+  @override
+  String get homeLatestReportViewFullSubtitle => '상세 분석과 조언 확인';
+
+  @override
+  String get homeLatestReportCompareHistory => '과거 리포트 비교';
+
+  @override
+  String get homeLatestReportCompareHistorySubtitle => '체질 변화 추이 확인';
+
+  @override
+  String get homeLatestReportEmptyTitle => '아직 체질 리포트가 없습니다';
+
+  @override
+  String get homeLatestReportEmptySubtitle =>
+      '스마트 검사를 완료하면 이곳에서 체질 분석을 확인할 수 있습니다.';
+
+  @override
+  String get homeLatestReportLoadFailed => '최근 리포트를 불러오지 못했습니다';
 
   @override
   String get homeLastReportInsight => '기허 경향 · 비위 허약';

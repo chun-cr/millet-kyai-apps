@@ -156,7 +156,7 @@ class _Tab2ConstitutionState extends State<_Tab2Constitution>
                             return CustomPaint(
                               key: const ValueKey('report_constitution_radar'),
                               size: const Size(140, 140),
-                              painter: _ConstitutionRadarPainter(
+                              painter: ConstitutionRadarPainter(
                                 scores: constitutionScores,
                                 progress: _radarProgress.value,
                               ),

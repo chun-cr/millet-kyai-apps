@@ -389,9 +389,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bottomNavScan => 'Scan';
 
   @override
-  String get bottomNavReport => 'Report';
-
-  @override
   String get bottomNavProfile => 'Profile';
 
   @override
@@ -454,6 +451,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String homeGreetingAfternoon(String name) {
+    return 'Good afternoon, $name';
+  }
+
+  @override
+  String homeGreetingEvening(String name) {
+    return 'Good evening, $name';
+  }
+
+  @override
   String get homeGreetingQuestion => 'How is your complexion today?';
 
   @override
@@ -488,27 +495,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeQuickScanPalmSub => 'Review palm lines';
-
-  @override
-  String get homeFunctionNavTitle => 'Feature Navigation';
-
-  @override
-  String get homeFunctionConstitution => 'Constitution Analysis';
-
-  @override
-  String get homeFunctionMeridianTherapy => 'Meridian Therapy';
-
-  @override
-  String get homeFunctionDietAdvice => 'Dietary Advice';
-
-  @override
-  String get homeFunctionMentalWellness => 'Mental Wellness';
-
-  @override
-  String get homeFunctionSeasonalCare => 'Seasonal Care';
-
-  @override
-  String get homeFunctionHistory => 'History';
 
   @override
   String get homeTodayCareTitle => 'Today’s Wellness';
@@ -550,6 +536,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeStartFullScan => 'Start Full Smart Scan';
+
+  @override
+  String get homeLatestReportTitle => 'Latest Constitution Report';
+
+  @override
+  String get homeLatestReportCheckedToday => 'Checked today';
+
+  @override
+  String homeLatestReportCheckedDays(int days) {
+    return 'Checked $days days ago';
+  }
+
+  @override
+  String get homeLatestReportNoResult => 'No constitution result';
+
+  @override
+  String get homeLatestReportRadarTitle => 'Constitution Tendency Radar';
+
+  @override
+  String get homeLatestReportRadarHint =>
+      'Higher values indicate a stronger tendency';
+
+  @override
+  String get homeLatestReportNoRadarData =>
+      'No constitution scores are available for this report';
+
+  @override
+  String get homeLatestReportViewFull => 'View Full Report';
+
+  @override
+  String get homeLatestReportViewFullSubtitle =>
+      'See detailed analysis and advice';
+
+  @override
+  String get homeLatestReportCompareHistory => 'Compare Past Reports';
+
+  @override
+  String get homeLatestReportCompareHistorySubtitle =>
+      'Review constitution changes over time';
+
+  @override
+  String get homeLatestReportEmptyTitle => 'No constitution report yet';
+
+  @override
+  String get homeLatestReportEmptySubtitle =>
+      'Complete a smart scan to see your constitution analysis here.';
+
+  @override
+  String get homeLatestReportLoadFailed => 'Unable to load the latest report';
 
   @override
   String get homeLastReportInsight =>

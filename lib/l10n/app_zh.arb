@@ -155,7 +155,6 @@
   "passwordStrengthVeryStrong": "非常强",
   "bottomNavHome": "首页",
   "bottomNavScan": "扫描",
-  "bottomNavReport": "报告",
   "bottomNavProfile": "我的",
   "commonCancel": "取消",
   "commonConfirm": "确认",
@@ -184,6 +183,22 @@
       }
     }
   },
+  "homeGreetingAfternoon": "下午好，{name}",
+  "@homeGreetingAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingEvening": "晚上好，{name}",
+  "@homeGreetingEvening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeGreetingQuestion": "今日气色如何？",
   "homeStatusSummary": "{constitution} · 上次检测 {days}天前",
   "@homeStatusSummary": {
@@ -205,13 +220,6 @@
   "homeQuickScanTongueSub": "察舌苔",
   "homeQuickScanPalmTitle": "手掌经络",
   "homeQuickScanPalmSub": "看掌纹",
-  "homeFunctionNavTitle": "功能导航",
-  "homeFunctionConstitution": "体质分析",
-  "homeFunctionMeridianTherapy": "经络调理",
-  "homeFunctionDietAdvice": "饮食建议",
-  "homeFunctionMentalWellness": "精神养生",
-  "homeFunctionSeasonalCare": "四季保养",
-  "homeFunctionHistory": "历史记录",
   "homeTodayCareTitle": "今日养生",
   "homeTodayCareCount": "两则建议",
   "homeTipDietTag": "饮食",
@@ -225,6 +233,27 @@
   "homeBalancedConstitution": "平和体质",
   "homeBalanceState": "阴阳较平衡",
   "homeStartFullScan": "开始全套智能检测",
+  "homeLatestReportTitle": "最近一次体质报告",
+  "homeLatestReportCheckedToday": "检测时间：今天",
+  "homeLatestReportCheckedDays": "检测时间：{days}天前",
+  "@homeLatestReportCheckedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLatestReportNoResult": "暂无体质结论",
+  "homeLatestReportRadarTitle": "体质倾向雷达图",
+  "homeLatestReportRadarHint": "数值越高，倾向越明显",
+  "homeLatestReportNoRadarData": "本次报告暂无体质分数据",
+  "homeLatestReportViewFull": "查看完整报告",
+  "homeLatestReportViewFullSubtitle": "查看详细分析与建议",
+  "homeLatestReportCompareHistory": "对比历史报告",
+  "homeLatestReportCompareHistorySubtitle": "查看体质变化趋势",
+  "homeLatestReportEmptyTitle": "还没有体质报告",
+  "homeLatestReportEmptySubtitle": "完成一次智能检测后，可在这里查看体质分析。",
+  "homeLatestReportLoadFailed": "最新报告加载失败",
   "homeLastReportInsight": "气虚偏颇 · 脾胃虚弱",
   "homeLastReportSummary": "脾气亏虚，运化失健。面色偏黄，舌淡苔白，建议健脾益气，规律作息。",
   "profileTitle": "我的",

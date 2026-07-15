@@ -370,9 +370,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bottomNavScan => '扫描';
 
   @override
-  String get bottomNavReport => '报告';
-
-  @override
   String get bottomNavProfile => '我的';
 
   @override
@@ -435,6 +432,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String homeGreetingAfternoon(String name) {
+    return '下午好，$name';
+  }
+
+  @override
+  String homeGreetingEvening(String name) {
+    return '晚上好，$name';
+  }
+
+  @override
   String get homeGreetingQuestion => '今日气色如何？';
 
   @override
@@ -468,27 +475,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeQuickScanPalmSub => '看掌纹';
-
-  @override
-  String get homeFunctionNavTitle => '功能导航';
-
-  @override
-  String get homeFunctionConstitution => '体质分析';
-
-  @override
-  String get homeFunctionMeridianTherapy => '经络调理';
-
-  @override
-  String get homeFunctionDietAdvice => '饮食建议';
-
-  @override
-  String get homeFunctionMentalWellness => '精神养生';
-
-  @override
-  String get homeFunctionSeasonalCare => '四季保养';
-
-  @override
-  String get homeFunctionHistory => '历史记录';
 
   @override
   String get homeTodayCareTitle => '今日养生';
@@ -528,6 +514,50 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeStartFullScan => '开始全套智能检测';
+
+  @override
+  String get homeLatestReportTitle => '最近一次体质报告';
+
+  @override
+  String get homeLatestReportCheckedToday => '检测时间：今天';
+
+  @override
+  String homeLatestReportCheckedDays(int days) {
+    return '检测时间：$days天前';
+  }
+
+  @override
+  String get homeLatestReportNoResult => '暂无体质结论';
+
+  @override
+  String get homeLatestReportRadarTitle => '体质倾向雷达图';
+
+  @override
+  String get homeLatestReportRadarHint => '数值越高，倾向越明显';
+
+  @override
+  String get homeLatestReportNoRadarData => '本次报告暂无体质分数据';
+
+  @override
+  String get homeLatestReportViewFull => '查看完整报告';
+
+  @override
+  String get homeLatestReportViewFullSubtitle => '查看详细分析与建议';
+
+  @override
+  String get homeLatestReportCompareHistory => '对比历史报告';
+
+  @override
+  String get homeLatestReportCompareHistorySubtitle => '查看体质变化趋势';
+
+  @override
+  String get homeLatestReportEmptyTitle => '还没有体质报告';
+
+  @override
+  String get homeLatestReportEmptySubtitle => '完成一次智能检测后，可在这里查看体质分析。';
+
+  @override
+  String get homeLatestReportLoadFailed => '最新报告加载失败';
 
   @override
   String get homeLastReportInsight => '气虚偏颇 · 脾胃虚弱';
