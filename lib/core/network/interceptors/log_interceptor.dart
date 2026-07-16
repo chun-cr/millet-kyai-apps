@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../utils/logger.dart';
 
@@ -77,6 +78,9 @@ class AppLogInterceptor extends Interceptor {
   }
 
   String _truncate(String value) {
+    if (kDebugMode) {
+      return value;
+    }
     const maxLength = 500;
     if (value.length <= maxLength) {
       return value;
