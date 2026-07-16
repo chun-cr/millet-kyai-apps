@@ -111,15 +111,10 @@ class ScanTongueUploadResult {
   bool get tongueReportSucceeded => _asBool(tongueReport['success']) == true;
 
   bool get hasGeneratedReport =>
-      analysisSucceeded &&
-      hasDetectedTongue &&
-      tongueReportSucceeded &&
-      reportId.isNotEmpty;
+      analysisSucceeded && hasDetectedTongue && reportId.isNotEmpty;
 
   bool get reportGenerationFailed =>
-      analysisSucceeded &&
-      hasDetectedTongue &&
-      (!tongueReportSucceeded || reportId.isEmpty);
+      analysisSucceeded && hasDetectedTongue && reportId.isEmpty;
 
   bool get missingTongue {
     return analysisSucceeded && _asBool(analysisResult['hasTongue']) == false;

@@ -20,7 +20,6 @@ part 'profile_page_widgets.dart';
 // ── 颜色常量（与全局 TCM 风格统一）────────────────────────────────
 const _kPageBg = Color(0xFFF4F1EB); // 宣纸米色
 const _kPrimary = Color(0xFF2D6A4F); // 墨绿
-const _kPrimaryMid = Color(0xFF0D7A5A);
 const _kGold = Color(0xFFC9A84C); // 金色
 const _kTextPrimary = Color(0xFF1E1810);
 const _kTextSecondary = Color(0xFF3A3028);
@@ -98,10 +97,6 @@ class ProfilePage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 20),
 
-                      // 健康总览指标
-                      _buildHealthMetrics(context),
-                      const SizedBox(height: 20),
-
                       // 功能菜单组
                       _buildMenuGroup(context, ref),
                       const SizedBox(height: 20),
@@ -156,45 +151,6 @@ class ProfilePage extends ConsumerWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHealthMetrics(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: _kPrimary.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            _buildStatCell(
-              '12',
-              context.l10n.unitTimes,
-              context.l10n.profileMetricConsultCount,
-            ),
-            _buildStatDivider(),
-            _buildStatCell(
-              '86',
-              context.l10n.unitPoints,
-              context.l10n.profileMetricHealthScore,
-            ),
-            _buildStatDivider(),
-            _buildStatCell(
-              '3',
-              context.l10n.unitStage,
-              context.l10n.profileMetricConstitutionStages,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -464,51 +420,6 @@ class ProfilePage extends ConsumerWidget {
       ),
       child: const Icon(Icons.edit_outlined, size: 16, color: _kPrimary),
     );
-  }
-
-  Widget _buildStatCell(String value, String unit, String label) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          children: [
-            RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: value,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: _kTextPrimary,
-                    ),
-                  ),
-                  TextSpan(
-                    text: unit,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: _kTextHint.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, color: _kTextHint),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatDivider() {
-    return Container(width: 1, height: 36, color: _kDivider);
   }
 
   // ══════════════════════════════════════════════════════════════

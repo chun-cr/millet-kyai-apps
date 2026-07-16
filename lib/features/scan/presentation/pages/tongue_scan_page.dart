@@ -2,6 +2,7 @@
 // 保留现有扫描与上传逻辑，只整理页面结构与样式相关实现。
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -344,7 +345,7 @@ class _TongueScanPageState extends State<TongueScanPage>
   }
 
   void _logTongueUploadResponse(ScanTongueUploadResult response) {
-    AppLogger.log(
+    AppLogger.network(
       'Tongue upload response summary: '
       'stage=tongue '
       'path=/api/v1/saas/mobile/ai/diagnosis/upload '
@@ -355,6 +356,24 @@ class _TongueScanPageState extends State<TongueScanPage>
       'imageId=${response.imageId.isEmpty ? "empty" : response.imageId} '
       'requestId=${response.requestId.isEmpty ? "empty" : response.requestId}',
     );
+  }
+
+  void _logTongueAnalysisResult(ScanTongueUploadResult response) {
+    final result = response.analysisResult['result'];
+    final encodedResult = jsonEncode(result);
+    const maxChunkLength = 800;
+    final chunkCount = (encodedResult.length / maxChunkLength).ceil();
+
+    for (var index = 0; index < chunkCount; index += 1) {
+      final start = index * maxChunkLength;
+      final end = (start + maxChunkLength)
+          .clamp(0, encodedResult.length)
+          .toInt();
+      AppLogger.network(
+        'Tongue analysisResult.result '
+        '[${index + 1}/$chunkCount]: ${encodedResult.substring(start, end)}',
+      );
+    }
   }
 
   Future<void> _stopMonitoringBeforeTongueUpload() async {
@@ -550,6 +569,7 @@ class _TongueScanPageState extends State<TongueScanPage>
       }
 
       _logTongueUploadResponse(tongueUpload);
+      _logTongueAnalysisResult(tongueUpload);
 
       if (tongueUpload.analysisFailed) {
         _pauseAutoScanUntilReset = true;

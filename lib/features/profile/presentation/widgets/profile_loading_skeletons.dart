@@ -62,8 +62,6 @@ class ProfilePageLoadingSkeleton extends StatelessWidget {
                     children: const [
                       _ProfileHeroSkeleton(),
                       SizedBox(height: 20),
-                      _ProfileMetricsSkeleton(),
-                      SizedBox(height: 20),
                       _ProfileSectionSkeleton(titleWidth: 126, cardHeight: 186),
                       SizedBox(height: 20),
                       _ProfileCabinSkeleton(),
@@ -265,57 +263,6 @@ class _ProfileHeroSkeleton extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _ProfileMetricsSkeleton extends StatelessWidget {
-  const _ProfileMetricsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _kProfileCardBg,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: _kProfilePrimary.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            _metricCell(),
-            _divider(),
-            _metricCell(),
-            _divider(),
-            _metricCell(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _metricCell() {
-    return const Expanded(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          children: [
-            SkeletonLine(width: 48, height: 20),
-            SizedBox(height: 8),
-            SkeletonLine(width: 78),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _divider() {
-    return Container(width: 1, height: 36, color: _kProfileDivider);
   }
 }
 
