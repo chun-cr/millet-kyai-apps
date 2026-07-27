@@ -87,7 +87,7 @@ class DioClient {
         headers: {
           'X-App-Id': AppIdentity.currentAppId,
           'X-Platform': platform,
-          'X-Dev-Host-IP': '192.168.110.244',
+          'X-Dev-Host-IP': '192.168.1.244',
         },
       ),
     );

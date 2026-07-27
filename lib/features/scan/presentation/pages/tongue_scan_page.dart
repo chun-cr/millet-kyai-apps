@@ -359,19 +359,29 @@ class _TongueScanPageState extends State<TongueScanPage>
   }
 
   void _logTongueAnalysisResult(ScanTongueUploadResult response) {
-    final result = response.analysisResult['result'];
-    final encodedResult = jsonEncode(result);
+    _logTongueResponseJson(
+      'analysisResult.result',
+      response.analysisResult['result'],
+    );
+  }
+
+  void _logTongueReport(ScanTongueUploadResult response) {
+    _logTongueResponseJson('tongueReport', response.tongueReport);
+  }
+
+  void _logTongueResponseJson(String field, Object? value) {
+    final encodedValue = jsonEncode(value);
     const maxChunkLength = 800;
-    final chunkCount = (encodedResult.length / maxChunkLength).ceil();
+    final chunkCount = (encodedValue.length / maxChunkLength).ceil();
 
     for (var index = 0; index < chunkCount; index += 1) {
       final start = index * maxChunkLength;
       final end = (start + maxChunkLength)
-          .clamp(0, encodedResult.length)
+          .clamp(0, encodedValue.length)
           .toInt();
       AppLogger.network(
-        'Tongue analysisResult.result '
-        '[${index + 1}/$chunkCount]: ${encodedResult.substring(start, end)}',
+        'Tongue $field '
+        '[${index + 1}/$chunkCount]: ${encodedValue.substring(start, end)}',
       );
     }
   }
@@ -570,6 +580,7 @@ class _TongueScanPageState extends State<TongueScanPage>
 
       _logTongueUploadResponse(tongueUpload);
       _logTongueAnalysisResult(tongueUpload);
+      _logTongueReport(tongueUpload);
 
       if (tongueUpload.analysisFailed) {
         _pauseAutoScanUntilReset = true;
