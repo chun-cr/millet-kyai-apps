@@ -202,6 +202,10 @@ Widget _buildPhysiqueAnalysisSectionCard(
 
   final sectionType = section.sectionType.toLowerCase();
   final accentColor = _physiqueAnalysisSectionAccentColor(sectionType);
+  final showContentImages = switch (sectionType) {
+    'interpretation' || 'conditioning_reference' => false,
+    _ => true,
+  };
   final fallbackTitle =
       _nonEmpty(section.title) ?? _nonEmpty(state.data?.name) ?? '';
   final heroContent = _PhysiqueAnalysisSectionHeroContent.resolve(
@@ -236,6 +240,7 @@ Widget _buildPhysiqueAnalysisSectionCard(
             content: content,
             accentColor: accentColor,
             icon: _physiqueAnalysisContentIcon(sectionType, index),
+            showImage: showContentImages,
           ),
         );
       }),
@@ -519,15 +524,17 @@ class _PhysiqueAnalysisContentItem extends StatelessWidget {
     required this.content,
     required this.accentColor,
     required this.icon,
+    required this.showImage,
   });
 
   final ReportPhysiqueAnalysisContentData content;
   final Color accentColor;
   final IconData icon;
+  final bool showImage;
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = content.imageUrl.isNotEmpty;
+    final hasImage = showImage && content.imageUrl.isNotEmpty;
 
     return DecoratedBox(
       decoration: BoxDecoration(

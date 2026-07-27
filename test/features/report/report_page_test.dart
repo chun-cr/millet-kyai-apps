@@ -1081,6 +1081,7 @@ void main() {
                   {
                     'contentTitle': '饮食节律',
                     'contentText': '少量多餐，优先温软易消化食物。',
+                    'imageUrl': 'https://example.com/diet-content.png',
                     'sortNo': 1,
                   },
                 ],
@@ -1093,6 +1094,8 @@ void main() {
                   {
                     'contentTitle': '气虚解读',
                     'contentText': '重点是补气健脾，减少持续透支。',
+                    'imageUrl':
+                        'https://example.com/interpretation-content.png',
                     'sortNo': 1,
                   },
                 ],
@@ -1109,6 +1112,7 @@ void main() {
                   {
                     'contentTitle': '作息调养',
                     'contentText': '保持固定入睡时间，避免连续熬夜。',
+                    'imageUrl': 'https://example.com/conditioning-content.png',
                     'sortNo': 1,
                   },
                 ],
@@ -1187,13 +1191,15 @@ void main() {
       find.byKey(const ValueKey('report_physique_analysis_section_image_fade')),
       findsOneWidget,
     );
-    expect(
-      find.byKey(
-        const ValueKey(
-          'report_physique_analysis_section_content_interpretation_0',
-        ),
+    final interpretationContent = find.byKey(
+      const ValueKey(
+        'report_physique_analysis_section_content_interpretation_0',
       ),
-      findsOneWidget,
+    );
+    expect(interpretationContent, findsOneWidget);
+    expect(
+      find.descendant(of: interpretationContent, matching: find.byType(Image)),
+      findsNothing,
     );
     expect(find.text('体质分析'), findsOneWidget);
     expect(find.text('主要特征'), findsOneWidget);
@@ -1237,6 +1243,16 @@ void main() {
       ),
       findsOneWidget,
     );
+    final conditioningContent = find.byKey(
+      const ValueKey(
+        'report_physique_analysis_section_content_conditioning_reference_0',
+      ),
+    );
+    expect(conditioningContent, findsOneWidget);
+    expect(
+      find.descendant(of: conditioningContent, matching: find.byType(Image)),
+      findsNothing,
+    );
 
     await tester.tap(find.text(l10n.reportTabAdvice));
     await tester.pumpAndSettle();
@@ -1251,6 +1267,16 @@ void main() {
       find.byKey(
         const ValueKey('report_physique_analysis_section_hero_diet_reference'),
       ),
+      findsOneWidget,
+    );
+    final dietContent = find.byKey(
+      const ValueKey(
+        'report_physique_analysis_section_content_diet_reference_0',
+      ),
+    );
+    expect(dietContent, findsOneWidget);
+    expect(
+      find.descendant(of: dietContent, matching: find.byType(Image)),
       findsOneWidget,
     );
 
